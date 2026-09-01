@@ -67,10 +67,15 @@ export function NewsCard({
             {category}
           </span>
 
-          <h3 className={`font-bold text-gray-900 leading-[1.2] tracking-tight group-hover:text-brand-dark transition-colors ${variant === "hero" ? "text-2xl md:text-3xl" : "text-lg"
-            }`}>
-            {decodeEntities(post.title.rendered)}
-          </h3>
+          {variant === "hero" ? (
+            <h2 className="font-bold text-gray-900 leading-[1.2] tracking-tight group-hover:text-brand-dark transition-colors text-2xl md:text-3xl">
+              {decodeEntities(post.title.rendered)}
+            </h2>
+          ) : (
+            <h3 className="font-bold text-gray-900 leading-[1.2] tracking-tight group-hover:text-brand-dark transition-colors text-lg">
+              {decodeEntities(post.title.rendered)}
+            </h3>
+          )}
 
         </div>
       </div>

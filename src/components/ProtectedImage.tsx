@@ -81,8 +81,8 @@ export function ProtectedImage({
       className={`relative group overflow-hidden bg-zinc-100 ${fill ? 'w-full h-full' : ''} ${className || ''}`}
       onContextMenu={(e) => e.preventDefault()}
     >
-      {/* SKELETON ANIMATION (Usando clases globales de globals.css) */}
-      {!loaded && (
+      {/* SKELETON ANIMATION (solo en imágenes diferidas, no en LCP priority) */}
+      {!priority && !loaded && (
         <div className="absolute inset-0 z-20 sk-shimmer" />
       )}
 
@@ -92,7 +92,7 @@ export function ProtectedImage({
         fill={fill}
         width={!fill ? width : undefined}
         height={!fill ? height : undefined}
-        className={`transition-all duration-1000 group-hover:scale-105 pointer-events-none select-none ${fill ? 'object-cover' : ''} ${loaded ? 'opacity-100 blur-0' : 'opacity-0 blur-xl'}`}
+        className={`transition-opacity duration-300 group-hover:scale-105 pointer-events-none select-none ${fill ? 'object-cover' : ''} ${priority || loaded ? 'opacity-100' : 'opacity-0'}`}
         priority={priority}
         onLoad={() => setLoaded(true)}
         onError={() => setImageFailed(true)}

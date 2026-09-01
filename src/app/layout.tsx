@@ -214,11 +214,11 @@ export default async function RootLayout({
   return (
     <html lang="es" className={fontVariables} data-scroll-behavior="smooth">
       <head>
-        {/* Preconnects para acelerar TTFB y carga de medios */}
-        <link rel="preconnect" href="https://deultimominuto.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://deultimominuto.com" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Preconnects críticos para medios de WordPress */}
+        <link rel="preconnect" href="https://i0.wp.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://i0.wp.com" />
+        <link rel="preconnect" href="https://relojinformativo.do" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://relojinformativo.do" />
         
         {/* Schema.org NewsMediaOrganization & WebSite */}
         <script
@@ -235,13 +235,13 @@ export default async function RootLayout({
         <meta name="ICBM" content="19.8486, -71.6456" />
       </head>
       <body className="antialiased bg-white text-gray-900 flex flex-col min-h-screen max-w-full overflow-x-clip">
-        {/* Google News (Subscribe with Google Basic) */}
+        {/* Google News (Subscribe with Google Basic) — lazyOnload para evitar bloquear LCP/FCP */}
         <Script
           async
           src="https://news.google.com/swg/js/v1/swg-basic.js"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
-        <Script id="google-news-swg" strategy="afterInteractive">
+        <Script id="google-news-swg" strategy="lazyOnload">
           {`
             (self.SWG_BASIC = self.SWG_BASIC || []).push( basicSubscriptions => {
               basicSubscriptions.init({

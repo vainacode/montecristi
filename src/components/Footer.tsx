@@ -36,11 +36,11 @@ export function Footer() {
 
           {/* 2. Categorías / Noticias */}
           <div className="lg:col-span-4">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#BF1B23] mb-8">SECCIONES PRINCIPALES</h4>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[11px] text-gray-200 font-bold uppercase tracking-widest">
+            <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-red-400 mb-6">SECCIONES PRINCIPALES</h4>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px] text-gray-200 font-bold uppercase tracking-widest">
               {siteConfig.nav.slice(0, 8).map((item) => (
                 <li key={item.name}>
-                  <Link href={item.href} prefetch={false} className="hover:text-[#BF1B23] transition-all duration-300">
+                  <Link href={item.href} prefetch={false} className="inline-block py-1.5 hover:text-red-400 transition-colors">
                     {item.name}
                   </Link>
                 </li>
@@ -50,13 +50,13 @@ export function Footer() {
 
           {/* 3. Directorio SEO & Pauta */}
           <div className="lg:col-span-4 space-y-6">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#BF1B23] mb-8">PUBLICIDAD & EMPRESAS</h4>
+            <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-red-400 mb-6">PUBLICIDAD & EMPRESAS</h4>
             <div className="text-[11px] text-gray-300 font-inter leading-relaxed space-y-2">
               <p>Pauta con <strong>Montecristi.net</strong>, el periódico de Montecristi líder en noticias de Montecristi y la Línea Noroeste.</p>
-              <div className="flex flex-col gap-1 text-[10px] text-gray-400 pt-1">
-                <Link href="/montecristi" className="hover:text-white transition-colors">· Noticias de Montecristi Hoy</Link>
-                <Link href="/montecristi" className="hover:text-white transition-colors">· Montecristi Noticias de Última Hora</Link>
-                <Link href="/conoce-montecristi" className="hover:text-white transition-colors">· Periódico de Montecristi y Guía</Link>
+              <div className="flex flex-col gap-1 text-[11px] text-gray-300 pt-1">
+                <Link href="/montecristi" className="inline-block py-1.5 hover:text-white transition-colors">· Noticias de Montecristi Hoy</Link>
+                <Link href="/montecristi" className="inline-block py-1.5 hover:text-white transition-colors">· Montecristi Noticias de Última Hora</Link>
+                <Link href="/conoce-montecristi" className="inline-block py-1.5 hover:text-white transition-colors">· Periódico de Montecristi y Guía</Link>
               </div>
             </div>
             <Link href="/contacto" prefetch={false} className="inline-block bg-[#BF1B23] text-white px-8 py-3.5 text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-[#181818] transition-all shadow-xl hover:shadow-[#BF1B23]/20">
@@ -67,27 +67,18 @@ export function Footer() {
         </div>
 
         {/* 5. Legal Links Horizontal Section */}
-        <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 py-8 border-t border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
-          <Link href="/conocenos" prefetch={false} className="hover:text-white transition-colors">Conócenos</Link>
-          <Link href="/aviso-legal" prefetch={false} className="hover:text-white transition-colors">Aviso Legal</Link>
-          <Link href="/politica-de-privacidad" prefetch={false} className="hover:text-white transition-colors">Privacidad</Link>
-          <Link href="/politica-de-cookies" prefetch={false} className="hover:text-white transition-colors">Cookies</Link>
-          <Link href="/terminos" prefetch={false} className="hover:text-white transition-colors">Términos</Link>
-          <Link href="/mapa-del-sitio" prefetch={false} className="hover:text-white transition-colors">Mapa del Sitio</Link>
+        <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 py-8 border-t border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-gray-300">
+          <Link href="/conocenos" prefetch={false} className="inline-block py-1.5 hover:text-white transition-colors">Conócenos</Link>
+          <Link href="/aviso-legal" prefetch={false} className="inline-block py-1.5 hover:text-white transition-colors">Aviso Legal</Link>
+          <Link href="/politica-de-privacidad" prefetch={false} className="inline-block py-1.5 hover:text-white transition-colors">Privacidad</Link>
+          <Link href="/politica-de-cookies" prefetch={false} className="inline-block py-1.5 hover:text-white transition-colors">Cookies</Link>
+          <Link href="/terminos" prefetch={false} className="inline-block py-1.5 hover:text-white transition-colors">Términos</Link>
+          <Link href="/mapa-del-sitio" prefetch={false} className="inline-block py-1.5 hover:text-white transition-colors">Mapa del Sitio</Link>
         </div>
 
-        {/* 6. Clean Bottom copyright & Traffic Counter */}
-        <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">
+        {/* 6. Clean Bottom copyright */}
+        <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
           <p>© {new Date().getFullYear()} MONTECRISTI. TODOS LOS DERECHOS RESERVADOS.</p>
-
-          {/* Contador de Tráfico Who's Amung Us */}
-          <div className="flex items-center justify-center my-1 opacity-90 hover:opacity-100 transition-opacity min-h-[20px]">
-            <Script id="_waufxb" strategy="afterInteractive">
-              {`var _wau = _wau || []; _wau.push(["small", "2na7wb1eqp", "fxb"]);`}
-            </Script>
-            <Script async src="//waust.at/s.js" strategy="afterInteractive" />
-          </div>
-
           <p>DESARROLLADO POR <span className="text-gray-300">BELLOTA HOSTING</span></p>
         </div>
       </div>

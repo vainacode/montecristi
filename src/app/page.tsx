@@ -110,7 +110,7 @@ async function HomeContent() {
                       { href: siteConfig.social.instagram.url, label: "Instagram", hover: "hover:bg-gradient-to-tr hover:from-[#f09433] hover:via-[#e6683c] hover:to-[#bc1888] hover:border-transparent", icon: <IconInstagram /> },
                       { href: siteConfig.social.youtube.url, label: "YouTube", hover: "hover:bg-[#BF1B23] hover:border-[#BF1B23]", icon: <IconYouTube /> },
                     ].map(({ href, label, hover, icon }) => (
-                      <Link key={label} href={href} target="_blank" rel="noopener" prefetch={false}
+                      <Link key={label} href={href} target="_blank" rel="noopener" aria-label={`Seguir en ${label}`} prefetch={false}
                         className={`flex items-center justify-between p-3.5 bg-white/[0.05] border border-white/10 ${hover} transition-all duration-300 rounded-xl group/link`}>
                         <div className="flex items-center gap-3">
                           <div className="text-white bg-white/10 rounded-lg w-7 h-7 flex items-center justify-center group-hover/link:bg-white/20 transition-colors">{icon}</div>

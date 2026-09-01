@@ -30,6 +30,10 @@ const securityHeaders = [
     value: 'camera=(), microphone=(), geolocation=()'
   },
   {
+    key: 'Cross-Origin-Opener-Policy',
+    value: 'same-origin-allow-popups'
+  },
+  {
     key: 'Content-Security-Policy',
     value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.google.com https://*.doubleclick.net https://*.gstatic.com https://*.googlesyndication.com https://*.googletagservices.com https://pagead2.googlesyndication.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.google.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https:; frame-src 'self' https:;"
   }
@@ -82,10 +86,6 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
-    // Para imágenes remotas (provenientes de CDN como Photon/Jetpack i0.wp.com, etc.),
-    // evitamos que el servidor Node descargue y procese gigabytes de imágenes en memoria con Sharp,
-    // eliminando el error de "heap out of memory" y los timeouts 500.
-    unoptimized: true,
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 86400,
     deviceSizes: [320, 480, 640, 750, 828, 1080, 1200, 1440],

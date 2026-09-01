@@ -457,10 +457,10 @@ export function Header() {
                 Redes Sociales
               </span>
               <div className="flex items-center gap-3">
-                <Link href={siteConfig.social.facebook.url} target="_blank" rel="noopener" className="w-10 h-10 rounded-full bg-white/5 hover:bg-[#1877f2] flex items-center justify-center text-white transition-all"><IconFacebook /></Link>
-                <Link href={siteConfig.social.twitter.url} target="_blank" rel="noopener" className="w-10 h-10 rounded-full bg-white/5 hover:bg-black flex items-center justify-center text-white transition-all"><IconTwitter /></Link>
-                <Link href={siteConfig.social.instagram.url} target="_blank" rel="noopener" className="w-10 h-10 rounded-full bg-white/5 hover:bg-pink-600 flex items-center justify-center text-white transition-all"><IconInstagram /></Link>
-                <Link href={siteConfig.social.youtube.url} target="_blank" rel="noopener" className="w-10 h-10 rounded-full bg-white/5 hover:bg-[#BF1B23] flex items-center justify-center text-white transition-all"><IconYoutube /></Link>
+                <Link href={siteConfig.social.facebook.url} target="_blank" rel="noopener" aria-label="Síguenos en Facebook" className="w-10 h-10 rounded-full bg-white/5 hover:bg-[#1877f2] flex items-center justify-center text-white transition-all"><IconFacebook /></Link>
+                <Link href={siteConfig.social.twitter.url} target="_blank" rel="noopener" aria-label="Síguenos en Twitter" className="w-10 h-10 rounded-full bg-white/5 hover:bg-black flex items-center justify-center text-white transition-all"><IconTwitter /></Link>
+                <Link href={siteConfig.social.instagram.url} target="_blank" rel="noopener" aria-label="Síguenos en Instagram" className="w-10 h-10 rounded-full bg-white/5 hover:bg-pink-600 flex items-center justify-center text-white transition-all"><IconInstagram /></Link>
+                <Link href={siteConfig.social.youtube.url} target="_blank" rel="noopener" aria-label="Síguenos en YouTube" className="w-10 h-10 rounded-full bg-white/5 hover:bg-[#BF1B23] flex items-center justify-center text-white transition-all"><IconYoutube /></Link>
               </div>
             </div>
           </div>
