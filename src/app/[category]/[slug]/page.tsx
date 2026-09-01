@@ -361,11 +361,19 @@ async function ArticleContent({ slug }: { slug: string }) {
       {
         "@type": "NewsArticle",
         "@id": `${shareUrl}#article`,
-        "isPartOf": {
-          "@type": ["CreativeWork", "Product"],
-          "name": siteConfig.name,
-          "productID": `${siteConfig.googleNews.publicationId}:${siteConfig.googleNews.productId}`
-        },
+        ...(siteConfig.googleNews.enabled && siteConfig.googleNews.publicationId ? {
+          "isPartOf": {
+            "@type": ["CreativeWork", "Product"],
+            "name": siteConfig.name,
+            "productID": `${siteConfig.googleNews.publicationId}:${siteConfig.googleNews.productId}`
+          }
+        } : {
+          "isPartOf": {
+            "@type": ["CreativeWork", "WebSite"],
+            "name": siteConfig.name,
+            "url": siteConfig.url
+          }
+        }),
         "headline": cleanHeadline,
         "description": cleanExcerpt,
         "image": imageUrl ? [imageUrl] : [siteDefault],

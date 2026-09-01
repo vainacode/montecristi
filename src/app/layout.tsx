@@ -235,24 +235,28 @@ export default async function RootLayout({
         <meta name="ICBM" content="19.8486, -71.6456" />
       </head>
       <body className="antialiased bg-white text-gray-900 flex flex-col min-h-screen max-w-full overflow-x-clip">
-        {/* Google News (Subscribe with Google Basic) — lazyOnload para evitar bloquear LCP/FCP */}
-        <Script
-          async
-          src="https://news.google.com/swg/js/v1/swg-basic.js"
-          strategy="lazyOnload"
-        />
-        <Script id="google-news-swg" strategy="lazyOnload">
-          {`
-            (self.SWG_BASIC = self.SWG_BASIC || []).push( basicSubscriptions => {
-              basicSubscriptions.init({
-                type: "NewsArticle",
-                isPartOfType: ["Product"],
-                isPartOfProductId: "${siteConfig.googleNews.publicationId}:${siteConfig.googleNews.productId}",
-                clientOptions: { theme: "light", lang: "es-419" },
-              });
-            });
-          `}
-        </Script>
+        {/* Google News (Subscribe with Google Basic) — Solo se activa si hay un Publication ID configurado para montecristi.net */}
+        {siteConfig.googleNews.enabled && siteConfig.googleNews.publicationId && (
+          <>
+            <Script
+              async
+              src="https://news.google.com/swg/js/v1/swg-basic.js"
+              strategy="lazyOnload"
+            />
+            <Script id="google-news-swg" strategy="lazyOnload">
+              {`
+                (self.SWG_BASIC = self.SWG_BASIC || []).push( basicSubscriptions => {
+                  basicSubscriptions.init({
+                    type: "NewsArticle",
+                    isPartOfType: ["Product"],
+                    isPartOfProductId: "${siteConfig.googleNews.publicationId}:${siteConfig.googleNews.productId}",
+                    clientOptions: { theme: "light", lang: "es-419" },
+                  });
+                });
+              `}
+            </Script>
+          </>
+        )}
 
         <ScrollToTop />
 
