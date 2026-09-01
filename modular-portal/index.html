@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Morro Informativo | Noticias de Montecristi y el Mundo</title>
+  <link rel="stylesheet" href="design-tokens.css">
+  <style>
+    /* Global layout container */
+    #app {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      min-height: 100vh;
+      background-color: #f4f4f4;
+    }
+    
+    /* Ensure padding for fixed header */
+    main {
+      padding-top: 80px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app">
+    <navbar-component></navbar-component>
+    
+    <main>
+      <hero-grid-component></hero-grid-component>
+      <news-ticker-component></news-ticker-component>
+      
+      <!-- Unified flattened grid -->
+      <news-grid-component></news-grid-component>
+    </main>
+
+    <footer-component></footer-component>
+  </div>
+
+  <!-- Centralized Data -->
+  <script src="data.js"></script>
+
+  <!-- Components -->
+  <script src="components/Navbar.js"></script>
+  <script src="components/HeroGrid.js"></script>
+  <script src="components/NewsTicker.js"></script>
+  <script src="components/NewsGrid.js"></script>
+  <script src="components/Footer.js"></script>
+
+</body>
+</html>

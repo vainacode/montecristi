@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -l 'export const metadata' /c/dev/Morro Informativo/src/app/*.tsx)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(grep -E \"\\\\.ts$|\\\\.tsx$|config\")",
+      "Bash(npx tsc:*)",
+      "Bash(curl -sk --max-time 10 \"https://redaccion.morroinformativo.com/wp-json/morro/v1/posts?per_page=1\")",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(npx next:*)",
+      "Bash(node -e ':*)",
+      "Bash(curl -sk --max-time 8 \"https://fonts.googleapis.com/css2?family=Inter\" -o /dev/null -w \"%{http_code} en %{time_total}s\")",
+      "Bash(cmd /c \"rmdir /s /q \\\\\"C:\\\\dev\\\\Morro Informativo\\\\.next\\\\\"\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git commit -m 'fix: add wordpress domain to next.js image remotePatterns *)",
+      "Bash(npm list *)",
+      "Bash(vercel --prod)",
+      "Bash(git commit -m 'fix: correct IP extraction in middleware for Next.js 16 compatibility *)",
+      "Bash(git commit -m 'fix: use valid ad positions in galleries pages *)"
+    ]
+  }
+}

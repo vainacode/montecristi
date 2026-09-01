@@ -1,0 +1,5 @@
+# Disable execution of scripts in assets folder
+<FilesMatch "\.(php|pl|py|jsp|asp|sh|cgi)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>

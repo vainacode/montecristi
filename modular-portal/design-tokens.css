@@ -1,0 +1,51 @@
+:root {
+  --color-navy: #0d1b4b;
+  --color-red: #cc0000;
+  --color-orange: #e87722;
+  --color-white: #ffffff;
+  --color-gray-light: #f4f4f4;
+  --color-gray-dark: #333333;
+  --color-text: #1a1a1a;
+  
+  --font-headline: 'Georgia', serif;
+  --font-body: 'Helvetica Neue', Arial, sans-serif;
+  
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  
+  --border-radius-card: 4px;
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.15);
+  
+  --max-width: 1200px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-text);
+  background-color: var(--color-gray-light);
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-headline);
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+ul {
+  list-style: none;
+}

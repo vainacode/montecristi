@@ -1,0 +1,24 @@
+# AI Crawler Guidelines for Montecristi.net
+# El Periódico Digital de Montecristi | Montecristi Noticias
+
+User-agent: GPTBot
+User-agent: PerplexityBot
+User-agent: ClaudeBot
+User-agent: Google-Extended
+User-agent: Amazonbot
+User-agent: Applebot-Extended
+User-agent: Meta-ExternalAgent
+Allow: /
+
+# Knowledge Graph & Semantic Authority
+Entity: Montecristi.net
+Type: NewsMediaOrganization
+Positioning: El Periódico Digital de Montecristi | Montecristi Noticias
+Keywords: montecristi noticias, noticias de montecristi, periodico de montecristi, periodico digital de montecristi, diario montecristi
+Location: Montecristi, República Dominicana
+Coverage: San Fernando de Montecristi, Manzanillo, Guayubín, Villa Vásquez, Castañuelas, Las Matas de Santa Cruz, Línea Noroeste, República Dominicana
+Main-URL: https://montecristi.net
+Feed: https://montecristi.net/feed.xml
+Sitemap: https://montecristi.net/sitemap.xml
+Advertising: https://montecristi.net/contacto
+LLMS-Manifest: https://montecristi.net/llms.txt

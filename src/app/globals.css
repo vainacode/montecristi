@@ -1,0 +1,520 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-dark: #8A1017;
+  --color-brand-light: #BF1B23;
+  --color-brand-white: #ffffff;
+
+  /* Fuentes tipográficas: Títulos con Newsreader / Outfit; Cuerpo y descripciones con Open Sans (estilo Los Mocanos) */
+  --font-base: var(--font-open-sans), var(--font-outfit), system-ui, -apple-system, sans-serif;
+  --font-outfit: var(--font-outfit), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-montserrat: var(--font-montserrat), system-ui, sans-serif;
+  --font-inter: var(--font-open-sans), var(--font-outfit), system-ui, sans-serif;
+  --font-serif: var(--font-serif), "Newsreader", "Merriweather", "Lora", Georgia, Cambria, serif;
+  --font-display: var(--font-outfit), system-ui, sans-serif;
+  --font-source: var(--font-source-sans), "Source Sans 3", system-ui, sans-serif;
+  --font-body: var(--font-open-sans), "Open Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #111827;
+  --brand-dark: #8A1017;
+  --brand-light: #BF1B23;
+}
+
+html,
+body {
+  @apply overflow-x-clip max-w-[100vw];
+  scroll-behavior: smooth;
+  margin: 0;
+  padding: 0;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-outfit), system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-outfit), system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.newspaper-title,
+.newspaper-headline {
+  font-family: var(--font-serif);
+  letter-spacing: -0.015em;
+}
+
+@keyframes marquee-fast {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee-fast {
+  display: flex;
+  animation: marquee-fast 15s linear infinite;
+}
+
+.pause {
+  animation-play-state: paused;
+}
+
+
+/* ── Tipografía y separación de párrafos para artículos (Estilo Open Sans / Los Mocanos) ── */
+.prose {
+  font-family: var(--font-open-sans), "Open Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-size: 1.125rem !important; /* 18px */
+  line-height: 1.85 !important;
+  color: #27272a !important; /* zinc-800 */
+}
+
+.prose p {
+  font-family: var(--font-open-sans), "Open Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-size: 1.125rem !important; /* 18px */
+  line-height: 1.85 !important;
+  color: #27272a !important; /* zinc-800 */
+  margin-top: 1.25rem !important;
+  margin-bottom: 1.75rem !important; /* 28px de separación clara entre párrafos */
+  display: block !important;
+}
+
+.prose p:first-child {
+  margin-top: 0 !important;
+}
+
+.prose p:last-child {
+  margin-bottom: 0.5rem !important;
+}
+
+/* ── Diseño Premium para Citas Editorial (Blockquotes) ───────────────────── */
+.prose blockquote,
+blockquote {
+  position: relative !important;
+  background: linear-gradient(145deg, #fafafa 0%, #f4f4f6 100%) !important;
+  border: 1px solid #e4e4e7 !important;
+  border-left: 5px solid #BF1B23 !important;
+  border-radius: 0 1rem 1rem 0 !important;
+  padding: 2rem 2.25rem 2rem 2.5rem !important;
+  margin: 2.5rem 0 !important;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.02) !important;
+  overflow: hidden !important;
+}
+
+/* Marca de agua decorativa de comillas gigantes */
+.prose blockquote::before,
+blockquote::before {
+  content: "“" !important;
+  position: absolute !important;
+  top: -0.85rem !important;
+  left: 1rem !important;
+  font-family: var(--font-serif), Georgia, serif !important;
+  font-size: 6rem !important;
+  line-height: 1 !important;
+  color: #BF1B23 !important;
+  opacity: 0.12 !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  z-index: 0 !important;
+}
+
+.prose blockquote p,
+blockquote p {
+  position: relative !important;
+  z-index: 1 !important;
+  font-family: var(--font-serif), "Newsreader", Georgia, Cambria, serif !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  font-size: 1.25rem !important; /* 20px */
+  line-height: 1.75 !important;
+  color: #18181b !important; /* zinc-900 */
+  margin: 0 !important;
+}
+
+.prose blockquote p + p,
+blockquote p + p {
+  margin-top: 1rem !important;
+}
+
+/* Autor o fuente de la cita */
+.prose blockquote cite,
+.prose blockquote footer,
+blockquote cite,
+blockquote footer {
+  display: block !important;
+  margin-top: 1.25rem !important;
+  font-family: var(--font-outfit), system-ui, sans-serif !important;
+  font-style: normal !important;
+  font-weight: 800 !important;
+  font-size: 0.8125rem !important; /* 13px */
+  letter-spacing: 0.15em !important;
+  text-transform: uppercase !important;
+  color: #BF1B23 !important;
+}
+
+.prose blockquote cite::before,
+blockquote cite::before {
+  content: "— " !important;
+  color: #71717a !important;
+}
+
+/* ── Citas en línea (<q>) ────────────────────────────────────────────────── */
+.prose q {
+  font-family: var(--font-serif), Georgia, serif !important;
+  font-style: italic !important;
+  color: #18181b !important;
+  font-weight: 600 !important;
+  quotes: "“" "”" "‘" "’" !important;
+}
+
+/* ── Listas Editoriales (ul, ol) ────────────────────────────────────────── */
+.prose ul {
+  list-style: none !important;
+  padding-left: 0.5rem !important;
+  margin: 1.75rem 0 !important;
+}
+
+.prose ul > li {
+  position: relative !important;
+  padding-left: 1.75rem !important;
+  margin-bottom: 0.875rem !important;
+  line-height: 1.75 !important;
+}
+
+.prose ul > li::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 0.25rem !important;
+  top: 0.65rem !important;
+  width: 7px !important;
+  height: 7px !important;
+  border-radius: 9999px !important;
+  background-color: #BF1B23 !important;
+  box-shadow: 0 0 0 3px rgba(191, 27, 35, 0.15) !important;
+}
+
+.prose ol {
+  counter-reset: custom-counter !important;
+  list-style: none !important;
+  padding-left: 0.5rem !important;
+  margin: 1.75rem 0 !important;
+}
+
+.prose ol > li {
+  position: relative !important;
+  counter-increment: custom-counter !important;
+  padding-left: 2.25rem !important;
+  margin-bottom: 1rem !important;
+  line-height: 1.75 !important;
+}
+
+.prose ol > li::before {
+  content: counter(custom-counter) !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 0.15rem !important;
+  width: 1.5rem !important;
+  height: 1.5rem !important;
+  border-radius: 0.375rem !important;
+  background-color: #BF1B23 !important;
+  color: #ffffff !important;
+  font-family: var(--font-outfit), sans-serif !important;
+  font-size: 0.75rem !important;
+  font-weight: 900 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 2px 6px rgba(191, 27, 35, 0.3) !important;
+}
+
+/* ── Enlaces Editoriales en el Contenido ─────────────────────────────────── */
+.prose a:not([class*="not-prose"]) {
+  color: #BF1B23 !important;
+  font-weight: 700 !important;
+  text-decoration: underline !important;
+  text-decoration-color: rgba(191, 27, 35, 0.35) !important;
+  text-decoration-thickness: 1.5px !important;
+  text-underline-offset: 3px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.prose a:not([class*="not-prose"]):hover {
+  color: #8A1017 !important;
+  text-decoration-color: #BF1B23 !important;
+  background-color: rgba(191, 27, 35, 0.05) !important;
+  border-radius: 2px !important;
+}
+
+/* ── Texto Destacado / Negritas ──────────────────────────────────────────── */
+.prose strong,
+.prose b {
+  color: #09090b !important;
+  font-weight: 800 !important;
+}
+
+/* ── Separadores Editoriales (<hr>) ──────────────────────────────────────── */
+.prose hr {
+  border: 0 !important;
+  height: 1px !important;
+  background: linear-gradient(90deg, transparent 0%, #e4e4e7 30%, #e4e4e7 70%, transparent 100%) !important;
+  margin: 3rem 0 !important;
+  position: relative !important;
+}
+
+.prose hr::after {
+  content: "♦ ♦ ♦" !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  background-color: #ffffff !important;
+  padding: 0 1rem !important;
+  color: #BF1B23 !important;
+  font-size: 0.65rem !important;
+  letter-spacing: 0.3em !important;
+}
+
+/* ── Leyenda de imágenes (Figcaption) ────────────────────────────────────── */
+.prose figcaption,
+figcaption {
+  text-align: center !important;
+  font-family: var(--font-outfit), system-ui, sans-serif !important;
+  font-size: 0.75rem !important; /* 12px */
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.15em !important;
+  color: #71717a !important;
+  margin-top: 0.75rem !important;
+  padding: 0.5rem 1rem !important;
+  background: #fafafa !important;
+  border-radius: 0.375rem !important;
+  border: 1px solid #f4f4f5 !important;
+  display: inline-block !important;
+}
+
+/* ── Estilos para H2 y H3 en artículos ───────────────────────────────────── */
+.prose h2 {
+  font-family: var(--font-outfit), system-ui, sans-serif !important;
+  font-size: 1.35rem !important;
+  line-height: 1.35 !important;
+  font-weight: 900 !important;
+  font-style: normal !important;
+  color: #09090b !important;
+  margin-top: 3.5rem !important;
+  margin-bottom: 1.5rem !important;
+  border-left: 5px solid #BF1B23 !important;
+  padding-left: 1.25rem !important;
+  letter-spacing: -0.02em !important;
+  text-transform: none !important;
+}
+
+@media (min-width: 768px) {
+  .prose h2 {
+    font-size: 1.875rem !important;
+    line-height: 1.3 !important;
+  }
+}
+
+.prose h3 {
+  font-family: var(--font-outfit), system-ui, sans-serif !important;
+  font-size: 1.15rem !important;
+  line-height: 1.4 !important;
+  font-weight: 800 !important;
+  color: #27272a !important;
+  margin-top: 2.5rem !important;
+  margin-bottom: 1rem !important;
+}
+
+/* ── Protección de imágenes en artículos ─────────────────────────────────── */
+/* Impide arrastrar y seleccionar imágenes del contenido editorial */
+.prose img {
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+/* Las imágenes dentro de enlaces siguen siendo clickeables */
+.prose a img {
+  pointer-events: auto;
+}
+
+/* ── Utilidades ─────────────────────────────────────────────────────────── */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ── Animaciones Personalizadas ────────────────────────────────────────── */
+@keyframes subtle-zoom {
+  from {
+    transform: scale(1.05);
+  }
+
+  to {
+    transform: scale(1.15);
+  }
+}
+
+.animate-subtle-zoom {
+  animation: subtle-zoom 20s ease-in-out infinite alternate;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s ease-out forwards;
+}
+
+/* SKELETON SHIMMER UTILITIES */
+.sk-shimmer {
+  background: linear-gradient(
+    90deg,
+    #f0f2f5 0%,
+    #ffffff 40%,
+    #e8ebef 70%,
+    #f0f2f5 100%
+  );
+  background-size: 200% 100%;
+  animation: sk-wave 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.sk-shimmer-dark {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.16) 40%,
+    rgba(255, 255, 255, 0.06) 70%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: sk-wave 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes sk-wave {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes sk-dot {
+
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+
+  40% {
+    opacity: 1;
+    transform: scale(1.3);
+  }
+}
+
+/* ── Animaciones para NavigationLoader ─────────────────────────────────── */
+@keyframes progress-fast {
+  0% {
+    width: 0;
+  }
+
+  50% {
+    width: 70%;
+  }
+
+  100% {
+    width: 100%;
+  }
+}
+
+.animate-progress-fast {
+  animation: progress-fast 2s ease-in-out infinite;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-in.fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* ── Estilos de Impresión Profesional para Edición Impresa (Periódico Físico / PDF) ── */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 1cm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+  }
+
+  header,
+  footer,
+  nav,
+  .print\:hidden,
+  #news-ticker,
+  .scroll-to-top {
+    display: none !important;
+  }
+
+  article {
+    break-after: page !important;
+    page-break-after: always !important;
+    min-height: 100vh !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  img {
+    max-width: 100% !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+}

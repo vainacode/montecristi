@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Bellota Hosting">
+  <path
+    d="M32 4v8M12 28c0-12 8-16 20-16s20 4 20 16H12z"
+    stroke="#F5A623"
+    stroke-width="4"
+    stroke-linecap="round"
+    fill="#F5A623"
+  />
+  <path d="M16 28c0 14 8 30 16 30s16-16 16-30H16z" fill="#0B1E3D" />
+</svg>
