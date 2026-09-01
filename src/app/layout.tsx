@@ -1,53 +1,47 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Outfit, Montserrat, Newsreader, Source_Sans_3, Open_Sans } from "next/font/google";
+import { Outfit, Newsreader, Source_Sans_3, Open_Sans } from "next/font/google";
 import Script from "next/script";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { NewsTicker } from "@/components/NewsTicker";
+import { ClientUtilities } from "@/components/ClientUtilities";
 import { siteConfig } from "@/config/site";
-import ScrollToTop from "@/components/ScrollToTop";
-import { ExternalLinkManager } from "@/components/ExternalLinkManager";
-import { NavigationLoader } from "@/components/NavigationLoader";
-import { CopyProtection } from "@/components/CopyProtection";
 import "./globals.css";
 
 const outfit = Outfit({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  weight: ["400", "600", "700", "800", "900"],
   variable: "--font-outfit",
   display: "swap",
-});
-
-const montserrat = Montserrat({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
-  variable: "--font-montserrat",
-  display: "swap",
+  preload: true,
 });
 
 const newsreader = Newsreader({
   subsets: ["latin"],
-  style: ["normal", "italic"],
+  style: ["normal"],
   variable: "--font-serif",
   display: "swap",
+  preload: false,
 });
 
 const sourceSans = Source_Sans_3({
   subsets: ["latin"],
-  weight: ["400", "600", "700", "800", "900"],
+  weight: ["700", "900"],
   variable: "--font-source-sans",
   display: "swap",
+  preload: false,
 });
 
 const openSans = Open_Sans({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800"],
+  weight: ["400", "600", "700"],
   variable: "--font-open-sans",
   display: "swap",
+  preload: true,
 });
 
-const fontVariables = `${outfit.variable} ${montserrat.variable} ${newsreader.variable} ${sourceSans.variable} ${openSans.variable}`;
+const fontVariables = `${outfit.variable} ${newsreader.variable} ${sourceSans.variable} ${openSans.variable}`;
 
 // -- Metadata global (SEO + Redes Sociales) ------------------------------------
 export const metadata: Metadata = {
@@ -258,17 +252,12 @@ export default async function RootLayout({
           </>
         )}
 
-        <ScrollToTop />
-
-        <CopyProtection />
-        <NavigationLoader />
+        <ClientUtilities />
         <Header />
         <NewsTicker />
         <main className="flex-grow pt-[144px] max-w-full overflow-x-clip">
           {children}
         </main>
-        <ScrollToTop />
-        <ExternalLinkManager />
         <Footer />
       </body>
     </html>

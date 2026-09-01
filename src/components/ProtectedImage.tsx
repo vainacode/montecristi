@@ -94,6 +94,8 @@ export function ProtectedImage({
         height={!fill ? height : undefined}
         className={`transition-opacity duration-300 group-hover:scale-105 pointer-events-none select-none ${fill ? 'object-cover' : ''} ${priority || loaded ? 'opacity-100' : 'opacity-0'}`}
         priority={priority}
+        fetchPriority={priority ? 'high' : undefined}
+        loading={priority ? undefined : 'lazy'}
         onLoad={() => setLoaded(true)}
         onError={() => setImageFailed(true)}
         draggable={false}

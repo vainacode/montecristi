@@ -111,6 +111,8 @@ export function CustomAd({ size, position, className = '' }: CustomAdProps) {
   };
 
   const isHorizontal = size === 'horizontal';
+  // Only the top leaderboard ad is above the fold
+  const isAboveFold = position === 'homeTopLeaderboard';
 
   return (
     <div className={`flex items-center justify-center w-full ${className}`}>
@@ -128,7 +130,8 @@ export function CustomAd({ size, position, className = '' }: CustomAdProps) {
           height={adData.height}
           style={{ width: '100%', height: 'auto' }}
           className="w-full h-auto object-cover group-hover:scale-[1.01] transition-transform duration-500"
-          priority={position === 'homeTopLeaderboard'}
+          priority={isAboveFold}
+          loading={isAboveFold ? undefined : 'lazy'}
         />
       </Link>
     </div>
