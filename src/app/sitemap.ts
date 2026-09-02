@@ -2,15 +2,12 @@ import { MetadataRoute } from 'next';
 import { getCategories, getPosts, getCategorySlug, WPPost } from '@/lib/wp';
 import { siteConfig } from '@/config/site';
 
-export const revalidate = 3600; // Regenera el sitemap cada hora
+export const revalidate = 900; // Regenera el sitemap cada 15 minutos para indexación rápida
 
 /** Obtiene TODOS los artículos paginando de 100 en 100 hasta agotar resultados */
 async function getAllPosts(): Promise<WPPost[]> {
-  // Limitamos a los 500 artículos más recientes para prevenir timeouts en el build de Vercel (> 60s)
-  // 500 es un número balanceado para SEO y rendimiento de generación estática.
   const all: WPPost[] = [];
   try {
-    // Intentamos traer los primeros 500 (WP API suele limitar a 100 por página)
     for (let page = 1; page <= 5; page++) {
       const batch = await getPosts({ per_page: 100, page });
       if (!batch || !batch.length) break;
@@ -26,12 +23,12 @@ async function getAllPosts(): Promise<WPPost[]> {
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.url || 'https://montecristi.net';
 
-  // 1. Rutas Estáticas
+  // 1. Rutas Estáticas Principales
   const staticRoutes = siteConfig.nav.map((route) => ({
     url: `${baseUrl}${route.href}`,
     lastModified: new Date(),
-    changeFrequency: 'daily' as const,
-    priority: 0.8,
+    changeFrequency: 'hourly' as const,
+    priority: route.href === '/' ? 1.0 : 0.85,
   }));
 
   // 2. Rutas Legales
@@ -40,11 +37,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     '/politica-de-privacidad',
     '/politica-de-cookies',
     '/terminos',
+    '/mapa-del-sitio',
   ].map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date(),
     changeFrequency: 'monthly' as const,
-    priority: 0.3,
+    priority: 0.4,
   }));
 
   try {
@@ -54,17 +52,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${baseUrl}/${cat.slug}`,
       lastModified: new Date(),
       changeFrequency: 'hourly' as const,
-      priority: 0.7,
+      priority: 0.85,
     }));
 
-    // 4. Todos los artículos (paginado, sin límite artificial)
+    // 4. Todos los artículos con priorización de frescura (News SEO)
     const allPosts = await getAllPosts();
-    const postRoutes = allPosts.map((post) => ({
-      url: `${baseUrl}/${getCategorySlug(post)}/${post.slug}`,
-      lastModified: new Date(post.date),
-      changeFrequency: 'never' as const,
-      priority: 0.6,
-    }));
+    const now = Date.now();
+    const postRoutes = allPosts.map((post) => {
+      const postTime = new Date(post.date).getTime();
+      const ageHours = (now - postTime) / (1000 * 60 * 60);
+      const isFresh = ageHours <= 48;
+
+      return {
+        url: `${baseUrl}/${getCategorySlug(post)}/${post.slug}`,
+        lastModified: new Date(post.date),
+        changeFrequency: isFresh ? ('hourly' as const) : ('monthly' as const),
+        priority: isFresh ? 0.95 : 0.7,
+      };
+    });
 
     console.log(`[Sitemap] ${allPosts.length} artículos indexados en el sitemap.`);
 
