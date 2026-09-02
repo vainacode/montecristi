@@ -149,26 +149,31 @@ function cleanArticleContent(htmlContent: string, title: string, author?: string
   }
 
   // 3. Cierre / Outro Periodístico
-  textBlocks.push(`Informe completo para Montecristi.net. Noticias y actualidad.`);
+  textBlocks.push(`Informe completo para Montecristi.net.`);
 
-  // 4. Agrupación en fragmentos de locución fluidos (~600 a 800 caracteres)
+  // 4. Agrupación en fragmentos de locución fluidos y compactos (~150 a 280 caracteres)
+  // Esto previene los cuelgues de 15 segundos en navegadores móviles (Android/iOS)
   const chunks: string[] = [];
-  let currentChunk = '';
 
-  for (const block of textBlocks) {
-    if ((currentChunk + ' ' + block).length > 700) {
-      if (currentChunk.trim()) {
-        chunks.push(currentChunk.trim());
+  textBlocks.forEach(block => {
+    const sentences = block.match(/[^.!?]+[.!?]+|\S+$/g) || [block];
+    let tempChunk = '';
+
+    sentences.forEach(s => {
+      const trimmed = s.trim();
+      if (!trimmed) return;
+      if ((tempChunk + ' ' + trimmed).length > 250) {
+        if (tempChunk.trim()) chunks.push(tempChunk.trim());
+        tempChunk = trimmed;
+      } else {
+        tempChunk = tempChunk ? `${tempChunk} ${trimmed}` : trimmed;
       }
-      currentChunk = block;
-    } else {
-      currentChunk = currentChunk ? `${currentChunk} ${block}` : block;
-    }
-  }
+    });
 
-  if (currentChunk.trim()) {
-    chunks.push(currentChunk.trim());
-  }
+    if (tempChunk.trim()) {
+      chunks.push(tempChunk.trim());
+    }
+  });
 
   return chunks.length > 0 ? chunks : [cleanTitleText];
 }
@@ -190,7 +195,7 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const synthRef = useRef<SpeechSynthesis | null>(null);
-  const keepAliveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const activeUtterancesRef = useRef<SpeechSynthesisUtterance[]>([]);
 
   // ── Inicializar Web Speech API y Cargar Voces con prioridad PABLO ───────────
   useEffect(() => {
@@ -277,110 +282,90 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
     }
 
     return () => {
-      if (keepAliveIntervalRef.current) clearInterval(keepAliveIntervalRef.current);
       if (synthRef.current) {
         synthRef.current.cancel();
       }
     };
   }, []);
 
-  // ── Workaround Anti-Pause Bug de Chrome/Android ─────────────────────────────
-  useEffect(() => {
-    if (status === 'playing') {
-      if (!keepAliveIntervalRef.current) {
-        keepAliveIntervalRef.current = setInterval(() => {
-          if (synthRef.current && synthRef.current.speaking && !synthRef.current.paused) {
-            synthRef.current.pause();
-            synthRef.current.resume();
-          }
-        }, 10000);
-      }
-    } else {
-      if (keepAliveIntervalRef.current) {
-        clearInterval(keepAliveIntervalRef.current);
-        keepAliveIntervalRef.current = null;
-      }
-    }
-  }, [status]);
-
-  // ── Reproducción del fragmento actual (SpeechSynthesisUtterance) ────────────
-  const speakChunk = useCallback((
-    index: number,
+  // ── Encolar y reproducir fragmentos de forma síncrona (Compatible con Móvil/iOS/Android) ──
+  const startSpeechFromIndex = useCallback((
+    startIndex: number,
     chunkList: string[],
     currentRate: number,
-    voice: SpeechSynthesisVoice | null,
-    cancelCurrent: boolean = false
+    voice: SpeechSynthesisVoice | null
   ) => {
-    if (!synthRef.current) return;
+    if (!synthRef.current || chunkList.length === 0) return;
 
-    if (index >= chunkList.length) {
-      // Fin de la lectura completa
+    // 1. Cancelar cualquier locución previa
+    synthRef.current.cancel();
+    activeUtterancesRef.current = [];
+
+    if (startIndex >= chunkList.length) {
       setStatus('stopped');
       setCurrentChunkIndex(chunkList.length - 1);
       return;
     }
 
-    // Solo cancelar si se inició una nueva canción o búsqueda manual, no en transición continua
-    if (cancelCurrent) {
-      synthRef.current.cancel();
+    const utterances: SpeechSynthesisUtterance[] = [];
+
+    // 2. Crear y encolar todos los fragmentos restantes en la misma interacción de usuario
+    for (let i = startIndex; i < chunkList.length; i++) {
+      const text = chunkList[i];
+      if (!text || !text.trim()) continue;
+
+      const utterance = new SpeechSynthesisUtterance(text);
+
+      if (voice) {
+        utterance.voice = voice;
+        utterance.lang = voice.lang || 'es-ES';
+      } else {
+        utterance.lang = 'es-ES';
+      }
+
+      utterance.volume = 1.0;
+      utterance.rate = currentRate * 0.98;
+      utterance.pitch = 1.0;
+
+      const chunkIdx = i;
+
+      utterance.onstart = () => {
+        setStatus('playing');
+        setCurrentChunkIndex(chunkIdx);
+        setErrorMessage(null);
+      };
+
+      utterance.onend = () => {
+        if (chunkIdx >= chunkList.length - 1) {
+          setStatus('stopped');
+          setCurrentChunkIndex(chunkList.length - 1);
+          activeUtterancesRef.current = [];
+        }
+      };
+
+      utterance.onerror = (e) => {
+        if (e.error !== 'canceled' && e.error !== 'interrupted') {
+          console.warn('Speech synthesis error:', e.error);
+        }
+      };
+
+      utterances.push(utterance);
     }
 
-    const text = chunkList[index];
-    if (!text || !text.trim()) {
-      // Si el fragmento está vacío, pasar al siguiente
-      speakChunk(index + 1, chunkList, currentRate, voice, false);
+    if (utterances.length === 0) {
+      setStatus('stopped');
       return;
     }
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    globalUtterance = utterance;
+    // 3. Guardar referencia persistente para evitar Garbage Collection en Chromium/WebKit
+    activeUtterancesRef.current = utterances;
     if (typeof window !== 'undefined') {
-      (window as any).__montecristi_utterance = utterance;
+      (window as any).__montecristi_tts_queue = utterances;
     }
 
-    if (voice) {
-      utterance.voice = voice;
-      utterance.lang = voice.lang || 'es-ES';
-    } else {
-      utterance.lang = 'es-ES';
-    }
-
-    utterance.volume = 1.0;
-    utterance.rate = currentRate * 0.98;
-    utterance.pitch = 1.0;
-
-    utterance.onstart = () => {
-      setStatus('playing');
-      setErrorMessage(null);
-    };
-
-    utterance.onend = () => {
-      if (index + 1 < chunkList.length) {
-        setCurrentChunkIndex(index + 1);
-        setTimeout(() => {
-          speakChunk(index + 1, chunkList, currentRate, voice, false);
-        }, 50);
-      } else {
-        setStatus('stopped');
-        setCurrentChunkIndex(chunkList.length - 1);
-      }
-    };
-
-    utterance.onerror = (e) => {
-      // 'canceled' e 'interrupted' son disparados intencionalmente al detener/cambiar
-      if (e.error !== 'canceled' && e.error !== 'interrupted') {
-        if (index + 1 < chunkList.length) {
-          setTimeout(() => {
-            speakChunk(index + 1, chunkList, currentRate, voice, false);
-          }, 80);
-        } else {
-          setStatus('stopped');
-        }
-      }
-    };
-
+    // 4. Encolar todas las locuciones de forma síncrona
     try {
-      synthRef.current.speak(utterance);
+      utterances.forEach(u => synthRef.current?.speak(u));
     } catch (err) {
       setErrorMessage('No se pudo iniciar la locución en este dispositivo.');
       setStatus('stopped');
@@ -405,23 +390,25 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
     setIsMinimized(false);
     setErrorMessage(null);
 
-    speakChunk(0, parsedChunks, rate, selectedVoice, true);
-  }, [rate, selectedVoice, speakChunk]);
+    startSpeechFromIndex(0, parsedChunks, rate, selectedVoice);
+  }, [rate, selectedVoice, startSpeechFromIndex]);
 
   const pause = useCallback(() => {
     if (!synthRef.current) return;
     synthRef.current.cancel();
+    activeUtterancesRef.current = [];
     setStatus('paused');
   }, []);
 
   const resume = useCallback(() => {
     if (!synthRef.current || chunks.length === 0) return;
-    speakChunk(currentChunkIndex, chunks, rate, selectedVoice, true);
-  }, [chunks, currentChunkIndex, rate, selectedVoice, speakChunk]);
+    startSpeechFromIndex(currentChunkIndex, chunks, rate, selectedVoice);
+  }, [chunks, currentChunkIndex, rate, selectedVoice, startSpeechFromIndex]);
 
   const stop = useCallback(() => {
     if (!synthRef.current) return;
     synthRef.current.cancel();
+    activeUtterancesRef.current = [];
     setStatus('stopped');
     setCurrentChunkIndex(0);
   }, []);
@@ -439,34 +426,33 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
       const nextIdx = currentChunkIndex + 1;
       setCurrentChunkIndex(nextIdx);
       if (status === 'playing') {
-        speakChunk(nextIdx, chunks, rate, selectedVoice, true);
+        startSpeechFromIndex(nextIdx, chunks, rate, selectedVoice);
       }
     }
-  }, [currentChunkIndex, chunks, status, rate, selectedVoice, speakChunk]);
+  }, [currentChunkIndex, chunks, status, rate, selectedVoice, startSpeechFromIndex]);
 
   const prevChunk = useCallback(() => {
     if (currentChunkIndex > 0) {
       const prevIdx = currentChunkIndex - 1;
       setCurrentChunkIndex(prevIdx);
       if (status === 'playing') {
-        speakChunk(prevIdx, chunks, rate, selectedVoice, true);
+        startSpeechFromIndex(prevIdx, chunks, rate, selectedVoice);
       }
     } else {
-      // Reiniciar el fragmento actual
       if (status === 'playing') {
-        speakChunk(0, chunks, rate, selectedVoice, true);
+        startSpeechFromIndex(0, chunks, rate, selectedVoice);
       }
     }
-  }, [currentChunkIndex, chunks, status, rate, selectedVoice, speakChunk]);
+  }, [currentChunkIndex, chunks, status, rate, selectedVoice, startSpeechFromIndex]);
 
   const seekToChunk = useCallback((index: number) => {
     if (index >= 0 && index < chunks.length) {
       setCurrentChunkIndex(index);
       if (status === 'playing') {
-        speakChunk(index, chunks, rate, selectedVoice, true);
+        startSpeechFromIndex(index, chunks, rate, selectedVoice);
       }
     }
-  }, [chunks, status, rate, selectedVoice, speakChunk]);
+  }, [chunks, status, rate, selectedVoice, startSpeechFromIndex]);
 
   const setRate = useCallback((newRate: number) => {
     setRateState(newRate);
@@ -474,11 +460,10 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(STORAGE_RATE_KEY, newRate.toString());
     } catch (_) {}
 
-    // Si está reproduciendo, reiniciar el fragmento actual con la nueva velocidad
     if (status === 'playing' && chunks.length > 0) {
-      speakChunk(currentChunkIndex, chunks, newRate, selectedVoice, true);
+      startSpeechFromIndex(currentChunkIndex, chunks, newRate, selectedVoice);
     }
-  }, [status, chunks, currentChunkIndex, selectedVoice, speakChunk]);
+  }, [status, chunks, currentChunkIndex, selectedVoice, startSpeechFromIndex]);
 
   const setVoice = useCallback((newVoice: SpeechSynthesisVoice) => {
     setSelectedVoice(newVoice);
@@ -487,9 +472,9 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
     } catch (_) {}
 
     if (status === 'playing' && chunks.length > 0) {
-      speakChunk(currentChunkIndex, chunks, rate, newVoice, true);
+      startSpeechFromIndex(currentChunkIndex, chunks, rate, newVoice);
     }
-  }, [status, chunks, currentChunkIndex, rate, speakChunk]);
+  }, [status, chunks, currentChunkIndex, rate, startSpeechFromIndex]);
 
   const toggleMinimize = useCallback(() => {
     setIsMinimized(prev => !prev);
