@@ -52,7 +52,7 @@ export const siteConfig = {
 
   // ---- Google Analytics 4 ------------------------------------------------------------------------------------------------------------
   googleAnalytics: {
-    measurementId: "G-5WHQZVNVLM",
+    measurementId: "G-XJMFKFRGY4",
     propertyId: "530381783",
     serviceAccountEmail: process.env.GA_SERVICE_ACCOUNT_EMAIL ?? "",
     serviceAccountKey: process.env.GA_PRIVATE_KEY ?? "",

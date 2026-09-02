@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { NewsTicker } from "@/components/NewsTicker";
 import { ClientUtilities } from "@/components/ClientUtilities";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { NewsReaderProvider } from "@/context/NewsReaderContext";
 import { AudioPlayerBar } from "@/components/AudioNewsReader";
 import { siteConfig } from "@/config/site";
@@ -259,9 +260,12 @@ export default async function RootLayout({
 
         <NewsReaderProvider>
           <ClientUtilities />
+          <Suspense fallback={null}>
+            <GoogleAnalytics />
+          </Suspense>
           <Header />
           <NewsTicker />
-          <main className="flex-grow pt-16 md:pt-[144px] max-w-full overflow-x-clip">
+          <main className="flex-grow pt-24 md:pt-[144px] max-w-full overflow-x-clip">
             {children}
           </main>
           <Footer />

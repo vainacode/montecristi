@@ -67,7 +67,7 @@ async function HomeContent() {
         <h1 className="sr-only">Montecristi Noticias — El Periódico de Montecristi Digital | Noticias de Montecristi Hoy y República Dominicana</h1>
 
         {/* Ad: Top Leaderboard */}
-        <div className="container mx-auto px-4 mb-8 flex justify-center">
+        <div className="container mx-auto px-4 pt-3 md:pt-0 mb-8 flex justify-center">
           <CustomAd size="horizontal" position="homeTopLeaderboard" />
         </div>
 
