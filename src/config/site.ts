@@ -177,8 +177,8 @@ export const siteConfig = {
 
   // ---- Google News (Subscribe with Google Basic) --------------------------------------------------------------
   googleNews: {
-    enabled: Boolean(process.env.GOOGLE_NEWS_PUBLICATION_ID),
-    publicationId: process.env.GOOGLE_NEWS_PUBLICATION_ID || "",
+    enabled: true,
+    publicationId: "CAowhsfhCw",
     productId: "openaccess",
   },
 
