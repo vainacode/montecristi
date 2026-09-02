@@ -15,15 +15,32 @@ export function WhosAmungUsWidget({
   className = '',
 }: WhosAmungUsWidgetProps) {
   return (
-    <div className={`inline-flex items-center justify-center min-h-[22px] ${className}`}>
-      {/* Script oficial que inyecta un único widget de whos.amung.us */}
-      <Script id={`_wau${widgetId}`} strategy="afterInteractive">
+    <div className={`inline-flex items-center justify-center ${className}`}>
+      <a
+        href={`https://whos.amung.us/stats/${siteKey}/`}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Usuarios en línea - whos.amung.us"
+        className="inline-flex items-center hover:opacity-100 opacity-90 transition-opacity"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`https://whos.amung.us/swidget/${siteKey}.png`}
+          alt="Usuarios en línea"
+          width={80}
+          height={15}
+          className="h-[15px] w-auto object-contain"
+        />
+      </a>
+
+      {/* Script en segundo plano para sincronizar analíticas activas */}
+      <Script id={`_wau${widgetId}`} strategy="lazyOnload">
         {`var _wau = _wau || []; _wau.push(["small", "${siteKey}", "${widgetId}"]);`}
       </Script>
       <Script
         id={`wau-script-${siteKey}`}
         src="https://waust.at/s.js"
-        strategy="afterInteractive"
+        strategy="lazyOnload"
       />
     </div>
   );

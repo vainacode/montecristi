@@ -76,10 +76,10 @@ export function Footer() {
           <Link href="/mapa-del-sitio" prefetch={false} className="inline-block py-1.5 hover:text-white transition-colors">Mapa del Sitio</Link>
         </div>
 
-        {/* 6. Clean Bottom copyright & Whos.amung.us Counter */}
-        <div className="pt-8 border-t border-white/5 flex flex-col items-center justify-center gap-3 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+        {/* 6. Clean Bottom copyright & Whos.amung.us Counter in the middle */}
+        <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
           <p>© {new Date().getFullYear()} MONTECRISTI. TODOS LOS DERECHOS RESERVADOS.</p>
-          <div className="my-1 flex items-center justify-center min-h-[22px]">
+          <div className="flex items-center justify-center">
             <WhosAmungUsWidget siteKey="uwed10c87e" widgetId="h2h" />
           </div>
           <p>DESARROLLADO POR <span className="text-gray-300">BELLOTA HOSTING</span></p>
