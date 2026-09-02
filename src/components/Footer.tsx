@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import Script from "next/script";
+import { WhosAmungUsWidget } from "@/components/WhosAmungUsWidget";
 import { siteConfig } from "@/config/site";
 
 export function Footer() {
@@ -76,9 +76,12 @@ export function Footer() {
           <Link href="/mapa-del-sitio" prefetch={false} className="inline-block py-1.5 hover:text-white transition-colors">Mapa del Sitio</Link>
         </div>
 
-        {/* 6. Clean Bottom copyright */}
+        {/* 6. Clean Bottom copyright & Whos.amung.us Counter */}
         <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
           <p>© {new Date().getFullYear()} MONTECRISTI. TODOS LOS DERECHOS RESERVADOS.</p>
+          <div className="flex items-center gap-3">
+            <WhosAmungUsWidget siteKey="uwed10c87e" widgetId="h2h" type="small" />
+          </div>
           <p>DESARROLLADO POR <span className="text-gray-300">BELLOTA HOSTING</span></p>
         </div>
       </div>

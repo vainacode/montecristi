@@ -35,7 +35,7 @@ const securityHeaders = [
   },
   {
     key: 'Content-Security-Policy',
-    value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.google.com https://*.doubleclick.net https://*.gstatic.com https://*.googlesyndication.com https://*.googletagservices.com https://pagead2.googlesyndication.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.google.com; img-src 'self' data: https: blob:; media-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https:; frame-src 'self' https:;"
+    value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.google.com https://*.doubleclick.net https://*.gstatic.com https://*.googlesyndication.com https://*.googletagservices.com https://pagead2.googlesyndication.com https://*.amung.us https://widgets.amung.us https://whos.amung.us https://*.waust.at https://waust.at; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.google.com; img-src 'self' data: https: blob: https://*.amung.us https://whos.amung.us https://*.waust.at https://waust.at; media-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https: https://*.amung.us https://whos.amung.us https://*.waust.at https://waust.at; frame-src 'self' https: https://*.amung.us https://*.waust.at;"
   }
 ];
 
