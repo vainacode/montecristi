@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { getPosts } from '@/lib/wp';
+import { getPosts, getMontecristiPosts } from '@/lib/wp';
 import { PrintEditionReader } from '@/components/PrintEditionReader';
 import { siteConfig } from '@/config/site';
 
@@ -18,7 +18,10 @@ export const metadata: Metadata = {
 };
 
 export default async function EdicionImpresaPage() {
-  const posts = await getPosts({ per_page: 50, includeContent: true });
+  const [generalPosts, montecristiPosts] = await Promise.all([
+    getPosts({ per_page: 40, includeContent: true }).catch(() => []),
+    getMontecristiPosts({ per_page: 20 }).catch(() => []),
+  ]);
 
   const today = new Date();
   const dateFormatted = today.toLocaleDateString('es-DO', {
@@ -38,7 +41,8 @@ export default async function EdicionImpresaPage() {
   return (
     <main className="min-h-screen bg-[#e9e6df]">
       <PrintEditionReader
-        posts={posts || []}
+        generalPosts={generalPosts || []}
+        montecristiPosts={montecristiPosts || []}
         dateStr={dateStr}
         editionNumber={editionNumber}
       />

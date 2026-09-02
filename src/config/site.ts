@@ -60,14 +60,17 @@ export const siteConfig = {
 
   // ---- WordPress API & Feed ----------------------------------------------------------------------------------------------------------------------
   api: {
-    wordpressUrl: "https://relojinformativo.do/wp-json/wp/v2",
-    feedUrl: "https://relojinformativo.do/feed/",
+    wordpressUrl: "https://noticiariord.net/wp-json/wp/v2",
+    feedUrl: "https://noticiariord.net/feed/",
+    montecristiUrl: "https://www.santosvasquezinforma.com/wp-json/wp/v2",
+    montecristiFeedUrl: "https://www.santosvasquezinforma.com/category/montecristi/feed/",
+    montecristiCategoryId: 6,
     revalidate: 60,
   },
 
   // ---- Marca de Agua en Imágenes ------------------------------------------------------------------------------------------------
   watermark: {
-    enabled: false,
+    enabled: true,
     logoPath: "public/logo.png",
     opacity: 0.75,
     position: "bottom-right" as "bottom-right" | "bottom-left" | "center",

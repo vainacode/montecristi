@@ -3,81 +3,80 @@
 import React from 'react';
 import Link from 'next/link';
 import { fuelData } from '@/data/fuels';
-import { Fuel, TrendingDown, TrendingUp, Minus, ArrowRight } from 'lucide-react';
 
 interface FuelWidgetProps {
   className?: string;
 }
 
 export function FuelWidget({ className = '' }: FuelWidgetProps) {
-  const topFuels = fuelData.fuels.slice(0, 5);
+  // Tomamos los 6 combustibles principales exactamente como en el formato de referencia
+  const displayFuels = fuelData.fuels.slice(0, 6);
 
   return (
-    <div className={`bg-[#0f172a] text-white rounded-2xl p-5 border border-white/10 shadow-xl flex flex-col justify-between ${className}`}>
-      <div>
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
-            <h3 className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-1.5">
-              <Fuel size={14} className="text-red-400" />
-              Combustibles RD
-            </h3>
-          </div>
-          <span className="text-[10px] text-gray-300 font-mono">
-            MICM Oficial
-          </span>
-        </div>
-
-        {/* List */}
-        <div className="divide-y divide-white/10">
-          {topFuels.map((fuel) => {
-            const isDown = fuel.trend === 'down';
-            const isUp = fuel.trend === 'up';
-
-            return (
-              <div key={fuel.id} className="py-2 flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-100 truncate pr-2">
-                  {fuel.shortName}
-                </span>
-
-                <div className="flex items-center gap-2 text-right">
-                  {isDown && (
-                    <span className="text-[10px] font-bold text-emerald-300 font-mono">
-                      ▼ {Math.abs(fuel.delta).toFixed(2)}
-                    </span>
-                  )}
-                  {isUp && (
-                    <span className="text-[10px] font-bold text-red-300 font-mono">
-                      ▲ {Math.abs(fuel.delta).toFixed(2)}
-                    </span>
-                  )}
-                  {!isDown && !isUp && (
-                    <span className="text-[10px] font-bold text-gray-300 font-mono">
-                      — 0.00
-                    </span>
-                  )}
-                  <span className="text-xs font-black font-mono text-white min-w-[70px]">
-                    RD${fuel.price.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+    <div className={`bg-white rounded-xl border border-gray-200 shadow-sm p-3.5 sm:p-4 text-slate-900 ${className}`}>
+      {/* ── HEADER: COMBUSTIBLES / RD$ ── */}
+      <div className="flex items-center justify-between pb-2 px-1">
+        <h3 className="font-black text-sm uppercase tracking-wider text-[#042564] font-sans">
+          COMBUSTIBLES
+        </h3>
+        <span className="font-bold text-xs text-gray-400 font-sans tracking-wide">
+          RD$
+        </span>
       </div>
 
-      {/* Footer */}
-      <div className="pt-3 mt-3 border-t border-white/10 flex items-center justify-between text-[11px]">
-        <span className="text-gray-300 font-mono">
-          {fuelData.validRange.replace('Semana del ', '')}
+      {/* ── LISTA DE COMBUSTIBLES CON FILAS ALTERNADAS ── */}
+      <div className="flex flex-col rounded-sm overflow-hidden text-sm">
+        {displayFuels.map((fuel, index) => {
+          const isEven = index % 2 === 0;
+          const isFlat = fuel.trend === 'flat' || fuel.id === 'gas-natural' || fuel.delta === 0;
+          const isDown = fuel.trend === 'down';
+          const isUp = fuel.trend === 'up' || (!isFlat && !isDown);
+
+          // Color y símbolo de variación
+          const symbol = isFlat ? '=' : isDown ? '↓' : '↑';
+          const valueColor = isFlat
+            ? 'text-[#042564]'
+            : isDown
+            ? 'text-emerald-600'
+            : 'text-[#cc0000]';
+
+          return (
+            <div
+              key={fuel.id}
+              className={`px-3 py-1.5 flex items-center justify-between transition-colors ${
+                isEven ? 'bg-[#f0f4f8]' : 'bg-white'
+              }`}
+            >
+              {/* Nombre del Combustible */}
+              <span className="text-[13px] font-medium text-slate-800 font-sans truncate pr-2">
+                {fuel.name}
+              </span>
+
+              {/* Precio y Flecha/Signo */}
+              <div className="flex items-center gap-1 text-right shrink-0">
+                <span className={`text-[13.5px] font-black font-sans tracking-tight ${valueColor}`}>
+                  {fuel.price.toFixed(2)}
+                </span>
+                <span className={`text-[12px] font-black font-sans leading-none ${valueColor}`}>
+                  {symbol}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── PIE SUTIL CON ENLACE ── */}
+      <div className="pt-2.5 mt-1 flex items-center justify-between text-[10px] text-gray-500 font-sans px-1 border-t border-gray-100">
+        <span className="text-gray-400 truncate">
+          MICM Oficial
         </span>
         <Link
           href="/combustibles"
           prefetch={false}
-          className="text-red-300 hover:text-white font-bold flex items-center gap-1 transition-colors"
+          className="text-[#042564] hover:text-[#BF1B23] font-bold transition-colors"
         >
-          Ver todos <ArrowRight size={11} />
+          Ver histórico →
         </Link>
       </div>
     </div>

@@ -1,5 +1,5 @@
 /**
- * /api/image — Proxy de imágenes con MULTI-marca de agua automática (Protección Total)
+ * /api/image — Proxy de imágenes con MULTI-marca de agua automática y CINTILLO inferior permanente
  * Salida en formato WEBP (Alta Calidad) para descargas y visualización.
  */
 
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
 
     // Configuración Multi-Watermark EXTRA LARGE
     const logoWidth = Math.round(w * 0.50);
-    const opacityValue = 0.20; // Mantener el valor que puso el usuario
+    const opacityValue = 0.20;
 
     const logoSvg = readFileSync(LOGO_PATH);
     const logoProcessed = await sharp(logoSvg)
@@ -96,12 +96,34 @@ export async function GET(req: NextRequest) {
       { left: Math.round(w * 0.9 - logoW), top: Math.round(h * 0.85 - logoH) }
     ];
 
-    const compositeList = positions.map(pos => ({
+    const compositeList: sharp.OverlayOptions[] = positions.map(pos => ({
       input: logoProcessed,
       left: Math.max(0, pos.left),
       top: Math.max(0, pos.top),
       blend: "over" as const
     }));
+
+    // ── Cintillo Oficial Inferior (Marca de Agua Permanente en la base de la foto) ──
+    const bannerH = Math.max(44, Math.round(h * 0.08));
+    const bannerTop = h - bannerH;
+    const cintilloSvg = Buffer.from(`
+      <svg width="${w}" height="${bannerH}" viewBox="0 0 ${w} ${bannerH}" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="0" width="${w}" height="${bannerH}" fill="#042564" />
+        <polygon points="${w - bannerH * 2.8},0 ${w},0 ${w},${bannerH} ${w - bannerH * 3.5},${bannerH}" fill="#BF1B23" />
+        <circle cx="${w - bannerH * 0.85}" cy="${bannerH / 2}" r="${bannerH * 0.28}" fill="#ffffff" />
+        <circle cx="${w - bannerH * 0.85}" cy="${bannerH / 2}" r="${bannerH * 0.15}" fill="#BF1B23" />
+        <text x="${w / 2}" y="${bannerH * 0.65}" font-family="system-ui, -apple-system, sans-serif" font-size="${bannerH * 0.44}px" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="1.5px">
+          MONTECRISTI<tspan font-weight="700" fill="#e2e8f0">.NET</tspan>
+        </text>
+      </svg>
+    `);
+
+    compositeList.push({
+      input: cintilloSvg,
+      left: 0,
+      top: bannerTop,
+      blend: "over" as const
+    });
 
     const finalBuffer = await mainImage
       .composite(compositeList)

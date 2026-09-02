@@ -192,7 +192,7 @@ export async function getPosts(params: {
   const fields = [
     'id', 'date', 'slug', 'title', 'excerpt', 'featured_media',
     'featured_media_url', 'jetpack_featured_media_url', 'dum_api',
-    'categories', '_embedded.wp:featuredmedia', '_embedded.wp:term',
+    'categories', '_links', '_embedded', 'yoast_head_json', 'rank_math_head_json',
   ];
   if (params.includeContent) fields.push('content');
   query.append('_embed', '1');
@@ -215,23 +215,88 @@ export async function getPosts(params: {
   }, siteConfig.api.revalidate);
 }
 
+export async function getMontecristiPosts(params: {
+  per_page?: number;
+  page?: number;
+  offset?: number;
+} = {}): Promise<WPPost[]> {
+  const query = new URLSearchParams();
+  query.append('categories', (siteConfig.api.montecristiCategoryId || 6).toString());
+  if (params.per_page) query.append('per_page', params.per_page.toString());
+  if (params.page) query.append('page', params.page.toString());
+  if (params.offset) query.append('offset', params.offset.toString());
+  query.append('_embed', '1');
+  const fields = [
+    'id', 'date', 'slug', 'title', 'excerpt', 'featured_media',
+    'featured_media_url', 'jetpack_featured_media_url', 'dum_api',
+    'categories', '_links', '_embedded', 'yoast_head_json', 'rank_math_head_json',
+  ];
+  query.append('_fields', fields.join(','));
+
+  const cacheKey = `montecristi:posts:${query.toString()}`;
+  const montecristiBase = siteConfig.api.montecristiUrl || "https://www.santosvasquezinforma.com/wp-json/wp/v2";
+
+  return cachedFetch(cacheKey, async () => {
+    try {
+      const res = await fetchWithTimeout(`${montecristiBase}/posts?${query.toString()}`, {
+        next: { revalidate: siteConfig.api.revalidate },
+      });
+      if (!res.ok) return [];
+      const posts = await res.json();
+      return Array.isArray(posts) ? posts : [];
+    } catch (e) {
+      console.error('[WP] Error fetching Montecristi posts:', e);
+      return [];
+    }
+  }, siteConfig.api.revalidate);
+}
+
 export async function getPostBySlug(slug: string): Promise<WPPost | null> {
   const cleanSlug = encodeURIComponent(decodeURIComponent(slug).trim());
   const cacheKey = `post:slug:${cleanSlug}`;
 
   return cachedFetch(cacheKey, async () => {
+    // 1. Buscar en la fuente principal
     try {
       const res = await fetchWithTimeout(`${BASE_URL}/posts?slug=${cleanSlug}&_embed=1`, {
         next: { revalidate: siteConfig.api.revalidate },
       });
 
-      if (!res.ok) return null;
-      const posts = await res.json();
-      return Array.isArray(posts) && posts.length > 0 ? posts[0] : null;
+      if (res.ok) {
+        const posts = await res.json();
+        if (Array.isArray(posts) && posts.length > 0) return posts[0];
+      }
     } catch (e) {
-      console.error('[WP] Error fetching post by slug:', e);
-      return null;
+      console.error('[WP] Error fetching post by slug from primary source:', e);
     }
+
+    // 2. Buscar en la fuente de Montecristi (santosvasquezinforma.com)
+    try {
+      const montecristiBase = siteConfig.api.montecristiUrl || "https://www.santosvasquezinforma.com/wp-json/wp/v2";
+      const resMonte = await fetchWithTimeout(`${montecristiBase}/posts?slug=${cleanSlug}&_embed=1`, {
+        next: { revalidate: siteConfig.api.revalidate },
+      });
+
+      if (resMonte.ok) {
+        const postsMonte = await resMonte.json();
+        if (Array.isArray(postsMonte) && postsMonte.length > 0) return postsMonte[0];
+      }
+
+      // Si el slug es numérico (ID de post en santosvasquezinforma)
+      if (/^\d+$/.test(cleanSlug)) {
+        const resById = await fetchWithTimeout(`${montecristiBase}/posts/${cleanSlug}?_embed=1`, {
+          next: { revalidate: siteConfig.api.revalidate },
+        });
+        if (resById.ok) {
+          const postById = await resById.json();
+          if (postById && postById.id) return postById;
+        }
+      }
+    } catch (e) {
+      console.error('[WP] Error fetching post by slug from Montecristi source:', e);
+    }
+
+    return null;
   }, siteConfig.api.revalidate);
 }
 

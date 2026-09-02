@@ -189,16 +189,18 @@ export function Header() {
               className="flex items-center gap-2.5 sm:gap-3.5 py-1 group"
               aria-label="Ir a la portada de Montecristi.net"
             >
-              <Image
-                src="/logo.svg"
-                alt="Logo Montecristi"
-                width={50}
-                height={50}
-                className={`transition-all duration-300 ${
-                  isScrolled ? 'h-8 w-8 sm:h-9 sm:w-9' : 'h-10 w-10 sm:h-12 sm:w-12'
-                } w-auto object-contain drop-shadow-md group-hover:scale-105`}
-                priority
-              />
+              <div className={`relative transition-all duration-300 shrink-0 ${
+                isScrolled ? 'h-8 w-8 sm:h-9 sm:w-9' : 'h-9 w-9 sm:h-11 sm:w-11'
+              }`}>
+                <Image
+                  src="/logo.svg"
+                  alt="Logo Montecristi"
+                  fill
+                  sizes="(max-width: 640px) 36px, 44px"
+                  className="object-contain drop-shadow-md group-hover:scale-105"
+                  priority
+                />
+              </div>
               <span
                 className={`font-[family-name:var(--font-source-sans)] font-black tracking-tight text-white uppercase transition-all duration-300 leading-none ${
                   isScrolled

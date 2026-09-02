@@ -6,6 +6,8 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { NewsTicker } from "@/components/NewsTicker";
 import { ClientUtilities } from "@/components/ClientUtilities";
+import { NewsReaderProvider } from "@/context/NewsReaderContext";
+import { AudioPlayerBar } from "@/components/AudioNewsReader";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
 
@@ -14,7 +16,7 @@ const outfit = Outfit({
   weight: ["400", "600", "700", "800", "900"],
   variable: "--font-outfit",
   display: "swap",
-  preload: true,
+  preload: false,
 });
 
 const newsreader = Newsreader({
@@ -38,7 +40,7 @@ const openSans = Open_Sans({
   weight: ["400", "600", "700"],
   variable: "--font-open-sans",
   display: "swap",
-  preload: true,
+  preload: false,
 });
 
 const fontVariables = `${outfit.variable} ${newsreader.variable} ${sourceSans.variable} ${openSans.variable}`;
@@ -211,8 +213,8 @@ export default async function RootLayout({
         {/* Preconnects críticos para medios de WordPress */}
         <link rel="preconnect" href="https://i0.wp.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://i0.wp.com" />
-        <link rel="preconnect" href="https://relojinformativo.do" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://relojinformativo.do" />
+        <link rel="preconnect" href="https://noticiariord.net" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://noticiariord.net" />
         
         {/* Schema.org NewsMediaOrganization & WebSite */}
         <script
@@ -252,13 +254,16 @@ export default async function RootLayout({
           </>
         )}
 
-        <ClientUtilities />
-        <Header />
-        <NewsTicker />
-        <main className="flex-grow pt-[144px] max-w-full overflow-x-clip">
-          {children}
-        </main>
-        <Footer />
+        <NewsReaderProvider>
+          <ClientUtilities />
+          <Header />
+          <NewsTicker />
+          <main className="flex-grow pt-[144px] max-w-full overflow-x-clip">
+            {children}
+          </main>
+          <Footer />
+          <AudioPlayerBar />
+        </NewsReaderProvider>
       </body>
     </html>
   );

@@ -42,24 +42,54 @@ export function CopyProtection() {
       }
     };
 
-    // 3. Disuasión de atajos de descarga de código fuente
+    // 3. Disuasión de atajos de desarrollador, inspección y descarga de código fuente
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Bloquear Ctrl+U (Ver código fuente)
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'u' || e.key === 'U')) {
+      // Bloquear F12 (Herramientas de Desarrollador)
+      if (e.key === 'F12' || e.keyCode === 123) {
         e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+      // Bloquear Ctrl+Shift+I / Cmd+Option+I (Inspeccionar elemento)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'i' || e.key === 'I' || e.keyCode === 73)) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+      // Bloquear Ctrl+Shift+J / Cmd+Option+J (Consola)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'j' || e.key === 'J' || e.keyCode === 74)) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+      // Bloquear Ctrl+Shift+C (Inspector de elementos)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'c' || e.key === 'C' || e.keyCode === 67)) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+      // Bloquear Ctrl+U (Ver código fuente)
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'u' || e.key === 'U' || e.keyCode === 85)) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
       }
       // Bloquear Ctrl+S (Guardar página completa)
-      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S' || e.keyCode === 83)) {
         e.preventDefault();
+        e.stopPropagation();
+        return false;
       }
     };
 
     document.addEventListener('copy', handleCopy);
-    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, true);
+    document.addEventListener('keydown', handleKeyDown, true);
 
     return () => {
       document.removeEventListener('copy', handleCopy);
-      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown, true);
+      document.removeEventListener('keydown', handleKeyDown, true);
     };
   }, []);
 

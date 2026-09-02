@@ -1,4 +1,4 @@
-import { getPosts, getCategories, getCategorySlug } from "@/lib/wp";
+import { getPosts, getMontecristiPosts, getCategories, getCategorySlug } from "@/lib/wp";
 import { getMostReadPosts } from "@/lib/analytics";
 import { NewsCard } from "@/components/NewsCard";
 import { CustomAd } from "@/components/CustomAd";
@@ -196,9 +196,11 @@ async function CategoryContent({ slug }: { slug: string }) {
   const category = categories.find((c) => c.slug === slug);
   const categoryName = category?.name || slug.charAt(0).toUpperCase() + slug.slice(1);
 
-  // Solo traemos artículos de esa categoría. Sin fallback general.
+  // Solo traemos artículos de esa categoría. Si es Montecristi, usamos la fuente dedicada.
   let categoryPosts: WPPost[] = [];
-  if (category) {
+  if (slug === 'montecristi') {
+    categoryPosts = await getMontecristiPosts({ per_page: 19 }).catch(() => []);
+  } else if (category) {
     categoryPosts = await getPosts({ category: category.id, per_page: 19 }).catch(() => []);
   }
 

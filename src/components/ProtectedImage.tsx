@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useState, useRef } from 'react';
 import { siteConfig } from '@/config/site';
+import { BroadcastCintillo } from './BroadcastCintillo';
 
 interface ProtectedImageProps {
   src?: string | null;
@@ -14,6 +15,7 @@ interface ProtectedImageProps {
   className?: string;
   priority?: boolean;
   sizes?: string;
+  showCintillo?: boolean;
 }
 
 export function ProtectedImage({
@@ -26,36 +28,10 @@ export function ProtectedImage({
   className,
   priority,
   sizes,
+  showCintillo = true,
 }: ProtectedImageProps) {
   const [showMsg, setShowMsg] = useState(false);
   const msgTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const openOriginal = () => {
-    if (!src) return;
-    const viewUrl = `/api/image?url=${encodeURIComponent(src)}&title=${encodeURIComponent(title || alt)}`;
-    window.open(viewUrl, "_blank");
-  };
-
-  const triggerWatermarkDownload = () => {
-    if (!siteConfig.watermark.enabled || !src) return;
-
-    const downloadTitle = title || alt || 'montecristi';
-    const downloadUrl = `/api/image?url=${encodeURIComponent(src)}&title=${encodeURIComponent(downloadTitle)}&download=1`;
-    
-    const a = document.createElement("a");
-    a.href = downloadUrl;
-    a.download = `${downloadTitle.toLowerCase().replace(/\s+/g, '-')}.jpg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-
-    setShowMsg(true);
-    if (msgTimeout.current) clearTimeout(msgTimeout.current);
-    msgTimeout.current = setTimeout(() => setShowMsg(false), 3500);
-  };
-
-  const handleContextMenu = (e: React.MouseEvent) => {
-  };
 
   const [loaded, setLoaded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
@@ -72,6 +48,7 @@ export function ProtectedImage({
             className="object-contain"
           />
         </div>
+        {showCintillo && <BroadcastCintillo />}
       </div>
     );
   }
@@ -102,6 +79,11 @@ export function ProtectedImage({
         sizes={sizes || "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"}
       />
       
+      {/* Cintillo oficial informativo en todas las fotos */}
+      {showCintillo && (
+        <BroadcastCintillo />
+      )}
+
       {/* Capa invisible de protección total contra guardado */}
       <div className="absolute inset-0 z-10 select-none pointer-events-auto bg-transparent" />
     </div>

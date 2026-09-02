@@ -1,10 +1,12 @@
-import { getPosts, getFeaturedImage, getCategorySlug } from "@/lib/wp";
+import { getPosts, getMontecristiPosts, getFeaturedImage, getCategorySlug } from "@/lib/wp";
 import { getMostReadPosts } from "@/lib/analytics";
 import { NewsCard } from "@/components/NewsCard";
 import { CustomAd } from "@/components/CustomAd";
 import { LoadMoreFeed } from "@/components/LoadMoreFeed";
 import { MostRead } from "@/components/MostRead";
 import { FuelWidget } from "@/components/FuelWidget";
+import { MontecristiSpotlight } from "@/components/MontecristiSpotlight";
+import { MontecristiVideoSection } from "@/components/MontecristiVideoSection";
 import { siteConfig } from "@/config/site";
 import Link from "next/link";
 import Image from "next/image";
@@ -38,8 +40,11 @@ export default async function Home() {
 }
 
 async function HomeContent() {
-  // 6 artículos destacados + 18 del primer bloque visible.
-  const allPosts = await getPosts({ per_page: 24 });
+  // Peticiones en paralelo: artículos generales + artículos dedicados de Montecristi
+  const [allPosts, montecristiPosts] = await Promise.all([
+    getPosts({ per_page: 24 }),
+    getMontecristiPosts({ per_page: 4 })
+  ]).catch(() => [[], []]);
 
   if (!allPosts || allPosts.length === 0) {
     return <ApiFallbackScreen />;
@@ -132,7 +137,12 @@ async function HomeContent() {
           </div>
         </section>
 
-        {/* Ad: 970x90 después del Hero */}
+        {/* --- SECCIÓN DEDICADA: NOTICIAS DE MONTECRISTI (ESTILO EL INFORME CON EL RELOJ GIGANTE) --- */}
+        {montecristiPosts && montecristiPosts.length > 0 && (
+          <MontecristiSpotlight posts={montecristiPosts} />
+        )}
+
+        {/* Ad: 970x90 después del Hero / Spotlight */}
         <div className="container mx-auto px-4 mb-16 flex justify-center">
           <CustomAd size="horizontal" position="homeAfterHero" />
         </div>
@@ -167,6 +177,9 @@ async function HomeContent() {
             </aside>
           </div>
         </section>
+
+        {/* --- SECCIÓN MULTIMEDIA AL FINAL: ENTREVISTAS, VLOGS Y REPORTAJES EN VIDEO --- */}
+        <MontecristiVideoSection />
 
       </div>
     </div>

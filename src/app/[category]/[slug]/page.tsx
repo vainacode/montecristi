@@ -6,6 +6,7 @@ import { ProtectedImage } from "@/components/ProtectedImage";
 import { MostRead } from "@/components/MostRead";
 import { CustomAd } from "@/components/CustomAd";
 import { AuthorBox } from "@/components/AuthorBox";
+import { ListenButton } from "@/components/AudioNewsReader";
 import { ViewTracker } from "@/components/ViewTracker";
 import { siteConfig } from "@/config/site";
 import { adsConfig } from "@/config/ads";
@@ -85,25 +86,113 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   };
 }
 
-// Utility to inject special embeds formatting
-function formatContent(content: string) {
+// Lista de dominios de feeds/fuentes a convertir en enlaces internos propios
+const SOURCE_DOMAINS = [
+  'noticiariord.net',
+  'santosvasquezinforma.com',
+  'www.santosvasquezinforma.com',
+  'diarioaldia.com',
+  'relojinformativo.do',
+  'morroinformativo.com',
+  'deultimominuto.net',
+  'remolacha.net'
+];
+
+// Utility to clean and format content, convert links and sanitize brands
+function formatContent(content: string, currentCategory = 'noticias') {
   let processed = content;
 
-  // ---- Convertir todos los <br> y saltos de línea de WordPress en párrafos reales con separación ----
+  // 1. ---- ELIMINAR ANUNCIOS Y CÓDIGOS DE TERCEROS INCRUSTADOS EN EL FEED WP ----
+  processed = processed
+    .replace(/<ins\b[^>]*class="[^"]*adsbygoogle[^"]*"[^>]*>[\s\S]*?<\/ins>/gi, '')
+    .replace(/<script\b[^>]*>(?:(?!<\/script>)[\s\S])*?(?:adsbygoogle|taboola|outbrain|mgid|propeller|monetag)[\s\S]*?<\/script>/gi, '')
+    .replace(/<div\b[^>]*class="[^"]*(?:ad-slot|ad-unit|ad_banner|wp-block-ad|anuncio|publicidad|adsbygoogle|banner-ad|ad-wrapper|code-block|advertisement)[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, ''); // comentarios de WordPress
+
+  // 2. ---- SANITIZACIÓN DE MARCA (Hacer que siempre pertenezca a Montecristi.net) ----
+  processed = processed
+    // Encabezados de agencia de noticias al inicio: "Diario al Día| ...", "Noticiario RD | ...", "Santos Vasquez Informa | ..."
+    .replace(/(?:Diario al D[ií]a|Noticiario RD|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa)\s*\|\s*/gi, 'Redacción Montecristi | ')
+    .replace(/(?:Diario al D[ií]a|Noticiario RD|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa)\s*[-–—]\s*/gi, 'Redacción Montecristi — ')
+    // Referencias a la publicación en el cuerpo del texto
+    .replace(/\b(?:para|en|por|según|informó|reportó|exclusiva de)\s+(?:Noticiario RD|Diario al D[ií]a|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa)\b/gi, (match) => {
+      return match.replace(/(?:Noticiario RD|Diario al D[ií]a|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa)/gi, siteConfig.name);
+    })
+    .replace(/\b(?:Noticiario RD|Diario al D[ií]a|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa)\b/gi, siteConfig.name);
+
+  // 3. ---- Convertir todos los <br> y saltos de línea de WordPress en párrafos reales ----
   processed = processed
     .replace(/<br\s*\/?>\s*/gi, '</p><p>')
     .replace(/(?:<\/p>\s*<p>)+/gi, '</p><p>')
     .replace(/<p>\s*<\/p>/gi, '')
     .replace(/<p>\s*&nbsp;\s*<\/p>/gi, '');
 
-  // ---- Párrafos con enlace único → botón CTA con estilo por plataforma --------------------
+  // 4. ---- CONVERSIÓN DE ENLACES: INTERNOS A NUESTRO SITIO, EXTERNOS CON TARGET BLANK ----
+  processed = processed.replace(
+    /<a\s+([^>]*?)href=(["'])(.*?)\2([^>]*?)>([\s\S]*?)<\/a>/gi,
+    (_match, before, _quote, rawHref, after, text) => {
+      const cleanHref = rawHref.trim();
+      let isSourceDomain = false;
+      let path = '';
+
+      try {
+        if (cleanHref.startsWith('/') && !cleanHref.startsWith('//')) {
+          isSourceDomain = true;
+          path = cleanHref;
+        } else {
+          const parsed = new URL(cleanHref);
+          const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
+          if (SOURCE_DOMAINS.some(d => host === d || host.endsWith('.' + d))) {
+            isSourceDomain = true;
+            path = parsed.pathname;
+          }
+        }
+      } catch {
+        // Enlace relativo o malformado
+        if (cleanHref.startsWith('/')) {
+          isSourceDomain = true;
+          path = cleanHref;
+        }
+      }
+
+      if (isSourceDomain) {
+        // Convertir enlace a la ruta interna de montecristi.net
+        const cleanPath = path.replace(/\/+/g, '/').replace(/^\/|\/$/g, '');
+        let internalUrl = '/';
+        if (cleanPath) {
+          const parts = cleanPath.split('/').filter(Boolean);
+          if (parts.length === 1) {
+            internalUrl = `/${currentCategory}/${parts[0]}`;
+          } else {
+            internalUrl = `/${cleanPath}`;
+          }
+        }
+
+        const attrs = (before + ' ' + after)
+          .replace(/\s*(?:target|rel)=["'][^"']*["']/gi, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        return `<a href="${internalUrl}"${attrs ? ' ' + attrs : ''} class="text-brand-dark hover:text-brand-light font-bold underline decoration-brand-dark/30 hover:decoration-brand-dark transition-colors">${text}</a>`;
+      }
+
+      // Enlaces externos auténticos (mantener target="_blank" rel="noopener noreferrer")
+      const attrs = (before + ' ' + after)
+        .replace(/\s*(?:target|rel)=["'][^"']*["']/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      return `<a href="${cleanHref}" target="_blank" rel="noopener noreferrer"${attrs ? ' ' + attrs : ''} class="text-brand-dark hover:text-brand-light font-bold underline decoration-brand-dark/30 hover:decoration-brand-dark transition-colors">${text}</a>`;
+    }
+  );
+
+  // 5. ---- Párrafos con enlace único → botón CTA con estilo por plataforma ----
   processed = processed.replace(
     /<p([^>]*)>\s*(?:<(?:strong|b|em|i)>\s*)*<a\s+href="([^"]*)"([^>]*)>([\s\S]*?)<\/a>\s*(?:<\/(?:strong|b|em|i)>\s*)*<\/p>/gi,
     (_match, _pAttrs, href, _aAttrs, rawText) => {
       const text = rawText.replace(/<[^>]*>/g, '').trim();
       if (!text) return _match;
 
-      // Plataforma → color + icono
       const isTelegram = /t\.me|telegram/i.test(href);
       const isWhatsApp = /whatsapp|wa\.me/i.test(href);
       const isInstagram = /instagram\.com/i.test(href);
@@ -151,7 +240,7 @@ function formatContent(content: string) {
     }
   );
 
-  // ---- YouTube (Improved Robust Match) ------------------------------------------------------------------------------------
+  // 6. ---- YouTube Embed ------------------------------------------------------------------------------------
   processed = processed.replace(
     /<iframe[^>]+?src=['"]([^'"]*?(?:youtube\.com|youtu\.be|youtube-nocookie\.com)[^'"]*)['"][^>]*>\s*<\/iframe>/gi,
     (match, src) => {
@@ -178,7 +267,26 @@ function formatContent(content: string) {
     }
   );
 
-  // ---- Instagram (Optimized Direct Iframe) ----------------------------------------------------------------------------
+  // 7. ---- Dailymotion Embed --------------------------------------------------------------------------------
+  processed = processed.replace(
+    /<iframe[^>]+?src=['"]([^'"]*?(?:dailymotion\.com|geo\.dailymotion\.com)[^'"]*)['"][^>]*>\s*<\/iframe>/gi,
+    (_match, src) => {
+      return `<div class="group my-16 relative not-prose">
+  <div class="bg-[#0f0f0f] rounded-2xl overflow-hidden shadow-[0_24px_64px_rgba(0,0,0,0.4)]">
+    <div class="flex items-center gap-3 px-5 py-3.5 border-b border-white/5 text-white">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="#0066dc"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248-2.01 9.475c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.48 14.239l-2.95-.924c-.642-.2-.654-.642.135-.95l11.512-4.437c.537-.194 1.006.13.385.32z"/></svg>
+      <span class="text-[11px] font-black uppercase tracking-[0.25em]">Video</span>
+      <span class="ml-auto text-[9px] text-white/30 font-bold uppercase tracking-widest border border-white/10 px-2.5 py-0.5 rounded-full">Dailymotion</span>
+    </div>
+    <div class="relative w-full aspect-video">
+      <iframe src="${src}" class="absolute inset-0 w-full h-full border-0" loading="lazy" allowfullscreen="true"></iframe>
+    </div>
+  </div>
+</div>`;
+    }
+  );
+
+  // 8. ---- Instagram Embed -----------------------------------------------------------------------------------
   processed = processed.replace(
     /(<blockquote class="instagram-media"[^>]*>[\s\S]*?<\/blockquote>)/gi,
     (match) => {
@@ -210,7 +318,7 @@ function formatContent(content: string) {
     }
   );
 
-  // ---- Twitter / X ----------------------------------------------------------------------------------------------------------------------------
+  // 9. ---- Twitter / X Embed ---------------------------------------------------------------------------------
   processed = processed.replace(
     /(<blockquote class="twitter-tweet"[^>]*>[\s\S]*?<\/blockquote>)/gi,
     (match) => `<div class="group my-16 flex justify-center not-prose">
@@ -225,7 +333,7 @@ function formatContent(content: string) {
 </div>`
   );
 
-  // ---- Facebook Video / Reel ----------------------------------------------------------------------------------------------------
+  // 10. ---- Facebook Video / Reel -----------------------------------------------------------------------------
   processed = processed.replace(
     /<iframe[^>]*src="[^"]*?facebook\.com\/plugins\/video\.php[^"]*"[^>]*>\s*<\/iframe>/gi,
     (match) => `<div class="group my-24 flex justify-center not-prose">
@@ -248,7 +356,7 @@ function formatContent(content: string) {
 </div>`
   );
 
-  // ---- Facebook Post --------------------------------------------------------------------------------------------------------------------
+  // 11. ---- Facebook Post -------------------------------------------------------------------------------------
   processed = processed.replace(
     /<iframe[^>]*src="[^"]*?facebook\.com\/plugins\/(?!video)[^"]*"[^>]*>\s*<\/iframe>/gi,
     (match) => {
@@ -269,14 +377,14 @@ function formatContent(content: string) {
     }
   );
 
-  // ---- Lazy load + Centrar Imágenes ----------------------------------------------------------------------------------------
+  // 12. ---- Lazy load + Centrar Imágenes ------------------------------------------------------------------------
   processed = processed.replace(/<img(?![^>]*\bloading\b)([^>]*)\/?>/gi, (match, attrs) => `<img loading="lazy" decoding="async"${attrs}>`);
   processed = processed.replace(/<img([^>]*)\/?>/gi, (_m, attrs) => {
     if (/style=/.test(attrs)) return `<img${attrs.replace(/style="([^"]*)"/, 'style="$1;display:block;margin-left:auto;margin-right:auto"')}>`;
     return `<img${attrs} style="display:block;margin-left:auto;margin-right:auto">`;
   });
 
-  // ---- Limpiar WordPress CMS Markers --------------------------------------------------------------------------------------
+  // 13. ---- Limpiar WordPress CMS Markers ----------------------------------------------------------------------
   processed = processed
     .replace(/\sclass="([^"]*)"/gi, (_, classValue) => {
       const cleaned = classValue.replace(/\bwp-block-\S+/g, '').replace(/\bhas-\S*-background-color\S*/g, '').replace(/\bis-layout-\S+/g, '').replace(/\bwp-[a-z][a-z-]*\b/g, '').replace(/\s{2,}/g, ' ').trim();
@@ -284,8 +392,8 @@ function formatContent(content: string) {
     })
     .replace(/data-wp-[^=\s]*="[^"]*"\s*/gi, '');
 
-  // ---- Marca de Agua Invisible (Anti-Scraping) ----------------------------------------------------------------
-  const watermark = `<div style="display:none;font-size:1px;color:transparent;opacity:0;">Este contenido pertenece a ${siteConfig.name} - morroinformativo.com. Prohibida su duplicación sin autorización.</div>`;
+  // 14. ---- Marca de Agua Invisible (Anti-Scraping) ------------------------------------------------------------
+  const watermark = `<div style="display:none;font-size:1px;color:transparent;opacity:0;">Este contenido pertenece a ${siteConfig.name} - ${siteConfig.url}. Prohibida su reproducción no autorizada.</div>`;
   
   return processed + watermark;
 }
@@ -326,22 +434,25 @@ async function ArticleContent({ slug }: { slug: string }) {
   const shareUrl = `${siteConfig.url}/${catSlug}/${slug}`;
   const shareTitle = post.title.rendered;
 
-  const formattedContent = formatContent(post.content.rendered);
+  const formattedContent = formatContent(post.content.rendered, catSlug);
   
-  // Dividir el contenido para inyectar publicidad de forma nativa en React
+  // Dividir el contenido para inyectar publicidad de forma limpia y equilibrada
   const rawParagraphs = formattedContent.split('</p>').map(p => p.trim()).filter(Boolean);
-  const showInContentAd = adsConfig.articulo.bannerEnContenido.visible && rawParagraphs.length > 2;
-  const showSecondAd = adsConfig.articulo.bannerEnContenido.visible && rawParagraphs.length > 10;
+  const totalParas = rawParagraphs.length;
   
+  const showFirstAd = adsConfig.articulo.bannerEnContenido.visible && totalParas >= 4;
+  const showSecondAd = adsConfig.articulo.bannerEnContenido.visible && totalParas >= 9;
+
+  const splitIndex1 = showFirstAd ? Math.min(3, Math.floor(totalParas / 2)) : totalParas;
+  const splitIndex2 = showSecondAd ? Math.min(splitIndex1 + 5, Math.floor(totalParas * 0.75)) : totalParas;
+
   const contentParts = {
-    part1: showInContentAd 
-      ? rawParagraphs.slice(0, 2).map(p => p.endsWith('</p>') ? p : p + '</p>').join('')
-      : formattedContent,
-    part2: (showInContentAd && showSecondAd)
-      ? rawParagraphs.slice(2, 7).map(p => p.endsWith('</p>') ? p : p + '</p>').join('')
-      : (showInContentAd ? rawParagraphs.slice(2).map(p => p.endsWith('</p>') ? p : p + '</p>').join('') : ''),
-    part3: showSecondAd
-      ? rawParagraphs.slice(7).map(p => p.endsWith('</p>') ? p : p + '</p>').join('')
+    part1: rawParagraphs.slice(0, splitIndex1).map(p => p.endsWith('</p>') ? p : p + '</p>').join(''),
+    part2: showFirstAd 
+      ? rawParagraphs.slice(splitIndex1, splitIndex2).map(p => p.endsWith('</p>') ? p : p + '</p>').join('')
+      : '',
+    part3: showSecondAd 
+      ? rawParagraphs.slice(splitIndex2).map(p => p.endsWith('</p>') ? p : p + '</p>').join('')
       : ''
   };
 
@@ -488,8 +599,6 @@ async function ArticleContent({ slug }: { slug: string }) {
             <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold font-serif text-brand-dark leading-[1.14] tracking-tight"
               dangerouslySetInnerHTML={{ __html: post.title.rendered }} />
 
-            <CustomAd size="horizontal" position="articleInContent" className="my-6" />
-
             <div className="flex flex-wrap items-center gap-6 text-[10px] font-black uppercase tracking-widest text-gray-500 border-t border-gray-200 pt-6">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-full bg-[#BF1B23] p-1.5 flex items-center justify-center shadow-sm overflow-hidden ring-1 ring-[#BF1B23]/20">
@@ -508,6 +617,23 @@ async function ArticleContent({ slug }: { slug: string }) {
                 <Calendar size={14} className="text-brand-dark" />
                 <span>{new Date(post.date).toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
               </div>
+            </div>
+
+            {/* BOTÓN OFICIAL: ESCUCHAR ESTA NOTICIA (TEXT-TO-SPEECH) */}
+            <div className="pt-5">
+              <ListenButton
+                article={{
+                  id: post.id,
+                  title: post.title.rendered.replace(/<[^>]*>/g, ''),
+                  author: "Redacción Montecristi",
+                  date: new Date(post.date).toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' }),
+                  category: categories[0] || 'NOTICIAS',
+                  slug: post.slug,
+                  categorySlug: catSlug,
+                  imageUrl: imageUrl,
+                  content: post.content.rendered,
+                }}
+              />
             </div>
           </div>
           <div className="lg:col-span-5 mt-10 lg:mt-0">
@@ -531,7 +657,6 @@ async function ArticleContent({ slug }: { slug: string }) {
           {/* Main Content Area */}
           <div className="lg:col-span-8">
 
-
             {/* Responsive Social Share */}
             <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 mb-8 pb-4 border-b border-gray-100">
               <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 mr-2 shrink-0">COMPARTIR:</span>
@@ -549,16 +674,15 @@ async function ArticleContent({ slug }: { slug: string }) {
               </Link>
             </div>
 
-            <div className="my-6">
-              <CustomAd size="horizontal" position="articleInContent" />
-            </div>
-
             {/* Prose Content */}
             <div className="prose prose-zinc max-w-none text-gray-900">
               <div dangerouslySetInnerHTML={{ __html: contentParts.part1 }} suppressHydrationWarning />
               
-              {showInContentAd && (
-                <CustomAd size="horizontal" position="articleInContent" />
+              {showFirstAd && (
+                <div className="my-10 not-prose">
+                  <div className="text-[9px] font-black uppercase tracking-widest text-gray-400 text-center mb-2">Publicidad</div>
+                  <CustomAd size="horizontal" position="articleInContent" />
+                </div>
               )}
 
               {contentParts.part2 && (
@@ -566,12 +690,21 @@ async function ArticleContent({ slug }: { slug: string }) {
               )}
 
               {showSecondAd && (
-                <CustomAd size="horizontal" position="articleInContent" />
+                <div className="my-10 not-prose">
+                  <div className="text-[9px] font-black uppercase tracking-widest text-gray-400 text-center mb-2">Publicidad</div>
+                  <CustomAd size="horizontal" position="articleInContent" />
+                </div>
               )}
 
               {contentParts.part3 && (
                 <div dangerouslySetInnerHTML={{ __html: contentParts.part3 }} suppressHydrationWarning />
               )}
+            </div>
+
+            {/* ANUNCIO INFERIOR */}
+            <div className="my-10 not-prose">
+              <div className="text-[9px] font-black uppercase tracking-widest text-gray-400 text-center mb-2">Publicidad</div>
+              <CustomAd size="horizontal" position="categoryAfterHero" />
             </div>
 
             {/* RELATED NEWS SECTION */}

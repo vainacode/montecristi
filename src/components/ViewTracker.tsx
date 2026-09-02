@@ -11,7 +11,7 @@ export function ViewTracker({ postId }: { postId: number }) {
     if (firedPosts.has(postId)) return;
     firedPosts.add(postId);
 
-    fetch(`${siteConfig.api.wordpressUrl}/view/${postId}`, {
+    fetch(`/api/views?id=${postId}`, {
       method: 'POST',
       keepalive: true,
     }).catch(() => {});
