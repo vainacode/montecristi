@@ -119,8 +119,8 @@ export function CustomAd({ size, position, className = '' }: CustomAdProps) {
       <Link
         href={adData.href}
         prefetch={false}
-        className={`group relative block overflow-hidden rounded-sm border border-gray-200/80 shadow-sm hover:shadow-md transition-all duration-300 ${
-          isHorizontal ? 'max-w-[970px] w-full' : 'max-w-[300px] w-full'
+        className={`group relative block w-full ${
+          isHorizontal ? 'max-w-[970px]' : 'max-w-[300px]'
         }`}
       >
         <Image
@@ -129,7 +129,7 @@ export function CustomAd({ size, position, className = '' }: CustomAdProps) {
           width={adData.width}
           height={adData.height}
           style={{ width: '100%', height: 'auto' }}
-          className="w-full h-auto object-cover group-hover:scale-[1.01] transition-transform duration-500"
+          className="w-full h-auto object-cover block"
           priority={isAboveFold}
           loading={isAboveFold ? undefined : 'lazy'}
         />

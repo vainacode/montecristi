@@ -432,7 +432,7 @@ export function PrintEditionReader({
 
                   <div className="border-t border-gray-300 pt-3">
                     <span className="text-[8px] font-mono text-gray-400 uppercase tracking-widest block mb-1 text-center">ESPACIO PUBLICITARIO</span>
-                    <div className="relative aspect-[300/250] w-full border border-gray-300 overflow-hidden shadow-xs">
+                    <div className="relative aspect-[300/250] w-full overflow-hidden">
                       <Image src="/ads/Bandera-300-x-250.jpg" alt="Publicidad Lateral" fill className="object-cover" />
                     </div>
                   </div>
@@ -442,7 +442,7 @@ export function PrintEditionReader({
 
               {/* Banner Inferior */}
               <div className="mt-4 pt-2 border-t-2 border-black">
-                <div className="relative w-full overflow-hidden border border-gray-300 shadow-xs">
+                <div className="relative w-full overflow-hidden">
                   <Image src="/ads/Bandera-970-X-90.jpg" alt="Publicidad Portada" width={970} height={90} style={{ width: '100%', height: 'auto' }} className="w-full h-auto block" />
                 </div>
               </div>
