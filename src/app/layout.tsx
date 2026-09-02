@@ -101,9 +101,12 @@ export const metadata: Metadata = {
     creator: siteConfig.seo.twitterHandle,
   },
 
-  // -- Verificación de propiedad ----------------------------------------------
+  // -- Verificación de propiedad (Google Search Console) -----------------------
   verification: {
-    google: siteConfig.seo.googleSiteVerification,
+    google: [
+      siteConfig.seo.googleSiteVerification,
+      "9HkTS1jc8URlK5Kdgo_LQSKiondqusaAnSNU3kuChX4",
+    ],
   },
 
   // -- Icons ----------------------------------------------------------------─

@@ -47,7 +47,7 @@ export const siteConfig = {
     locale: "es_DO",
     siteName: "Montecristi.net",
     robots: "index, follow",
-    googleSiteVerification: "9HkTS1jc8URlK5Kdgo_LQSKiondqusaAnSNU3kuChX4",
+    googleSiteVerification: "LDV-13Lptx9CvzJPrTxmm_2S2r3Lmi4iHvwWt5hQBy8",
   },
 
   // ---- Google Analytics 4 ------------------------------------------------------------------------------------------------------------
