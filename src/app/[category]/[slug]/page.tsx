@@ -636,8 +636,8 @@ async function ArticleContent({ slug }: { slug: string }) {
               />
             </div>
           </div>
-          <div className="lg:col-span-5 mt-10 lg:mt-0">
-            <div className="relative aspect-[4/3] rounded-sm overflow-hidden shadow-2xl ring-1 ring-gray-200">
+          <div className="lg:col-span-5 mt-6 lg:mt-0">
+            <div className="relative aspect-[16/10] sm:aspect-[4/3] max-h-[320px] sm:max-h-none rounded-sm overflow-hidden shadow-2xl ring-1 ring-gray-200">
               <ProtectedImage
                 src={imageUrl}
                 alt={post.title.rendered}
