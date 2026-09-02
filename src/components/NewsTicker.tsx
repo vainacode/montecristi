@@ -35,8 +35,8 @@ export function NewsTicker({ posts: initialPosts = [] }: NewsTickerProps) {
   if (!posts || posts.length === 0) return null;
 
   return (
-    <div className={`w-full fixed z-40 transition-all duration-300 ${isScrolled ? 'top-16' : 'top-24'
-      } bg-brand-dark text-white h-12 flex items-center shadow-lg overflow-hidden border-b-4 border-brand-light`}>
+    <div className={`hidden md:flex w-full fixed z-40 transition-all duration-300 ${isScrolled ? 'top-16' : 'top-24'
+      } bg-brand-dark text-white h-12 items-center shadow-lg overflow-hidden border-b-4 border-brand-light`}>
       <div className="bg-[#042564] text-white h-full flex items-center px-6 gap-3 shrink-0 border-r border-white/15">
         <div className="w-2 h-2 bg-[#042564] rounded-full animate-pulse shadow-[0_0_10px_rgba(4,37,100,0.9)]" />
         <span className="text-[10px] font-black uppercase tracking-[0.2em] whitespace-nowrap text-white">Último Minuto</span>

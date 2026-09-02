@@ -258,7 +258,7 @@ export default async function RootLayout({
           <ClientUtilities />
           <Header />
           <NewsTicker />
-          <main className="flex-grow pt-[144px] max-w-full overflow-x-clip">
+          <main className="flex-grow pt-16 md:pt-[144px] max-w-full overflow-x-clip">
             {children}
           </main>
           <Footer />

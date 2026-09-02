@@ -90,7 +90,7 @@ function cleanArticleContent(htmlContent: string, title: string, author?: string
   if (typeof window === 'undefined') return [title];
 
   const parser = new DOMParser();
-  const doc = parser.parseFromString(htmlContent, 'text/html');
+  const doc = parser.parseFromString(htmlContent || '', 'text/html');
 
   // Eliminar elementos no narrables
   const removeSelectors = [
@@ -115,37 +115,48 @@ function cleanArticleContent(htmlContent: string, title: string, author?: string
   textBlocks.push(introParts.join(' '));
 
   // 2. Extracción y Normalización del Cuerpo de la Noticia
-  const elements = doc.body.querySelectorAll('p, h2, h3, h4, blockquote, li');
-  if (elements.length > 0) {
-    elements.forEach(el => {
-      const raw = el.textContent?.trim() || '';
-      if (raw.length > 15) {
-        const broadcastText = normalizeForBroadcast(raw);
+  const elements = doc.body.querySelectorAll('p, h2, h3, h4, blockquote, li, div');
+  const seenTexts = new Set<string>();
+
+  elements.forEach(el => {
+    // Evitar divs que contienen párrafos para no duplicar
+    if (el.tagName === 'DIV' && el.querySelector('p, h2, h3, h4')) return;
+
+    const raw = el.textContent?.trim() || '';
+    if (raw.length > 20 && !seenTexts.has(raw)) {
+      seenTexts.add(raw);
+      const broadcastText = normalizeForBroadcast(raw);
+      if (broadcastText.length > 10) {
         const normalized = /[.?!]$/.test(broadcastText) ? broadcastText : `${broadcastText}.`;
         textBlocks.push(normalized);
       }
-    });
-  } else {
-    const rawText = doc.body.textContent || '';
-    rawText
+    }
+  });
+
+  // Si no se detectaron párrafos con querySelector, usar split de texto plano
+  if (textBlocks.length <= 1) {
+    const rawAll = doc.body.textContent || '';
+    rawAll
       .split(/\n+/)
       .map(s => s.trim())
-      .filter(s => s.length > 15)
+      .filter(s => s.length > 20)
       .forEach(s => {
         const broadcastText = normalizeForBroadcast(s);
-        textBlocks.push(/[.?!]$/.test(broadcastText) ? broadcastText : `${broadcastText}.`);
+        if (broadcastText.length > 10) {
+          textBlocks.push(/[.?!]$/.test(broadcastText) ? broadcastText : `${broadcastText}.`);
+        }
       });
   }
 
   // 3. Cierre / Outro Periodístico
-  textBlocks.push(`Informe especial para Montecristi.net. Noticias y actualidad.`);
+  textBlocks.push(`Informe completo para Montecristi.net. Noticias y actualidad.`);
 
-  // 4. Agrupación en fragmentos de locución fluidos
+  // 4. Agrupación en fragmentos de locución fluidos (~600 a 800 caracteres)
   const chunks: string[] = [];
   let currentChunk = '';
 
   for (const block of textBlocks) {
-    if ((currentChunk + ' ' + block).length > 850) {
+    if ((currentChunk + ' ' + block).length > 700) {
       if (currentChunk.trim()) {
         chunks.push(currentChunk.trim());
       }
@@ -282,7 +293,7 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
             synthRef.current.pause();
             synthRef.current.resume();
           }
-        }, 12000);
+        }, 10000);
       }
     } else {
       if (keepAliveIntervalRef.current) {
@@ -293,7 +304,13 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
   }, [status]);
 
   // ── Reproducción del fragmento actual (SpeechSynthesisUtterance) ────────────
-  const speakChunk = useCallback((index: number, chunkList: string[], currentRate: number, voice: SpeechSynthesisVoice | null) => {
+  const speakChunk = useCallback((
+    index: number,
+    chunkList: string[],
+    currentRate: number,
+    voice: SpeechSynthesisVoice | null,
+    cancelCurrent: boolean = false
+  ) => {
     if (!synthRef.current) return;
 
     if (index >= chunkList.length) {
@@ -303,18 +320,23 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Cancelar locución anterior
-    synthRef.current.cancel();
+    // Solo cancelar si se inició una nueva canción o búsqueda manual, no en transición continua
+    if (cancelCurrent) {
+      synthRef.current.cancel();
+    }
 
     const text = chunkList[index];
     if (!text || !text.trim()) {
       // Si el fragmento está vacío, pasar al siguiente
-      speakChunk(index + 1, chunkList, currentRate, voice);
+      speakChunk(index + 1, chunkList, currentRate, voice, false);
       return;
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
     globalUtterance = utterance;
+    if (typeof window !== 'undefined') {
+      (window as any).__montecristi_utterance = utterance;
+    }
 
     if (voice) {
       utterance.voice = voice;
@@ -335,7 +357,9 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
     utterance.onend = () => {
       if (index + 1 < chunkList.length) {
         setCurrentChunkIndex(index + 1);
-        speakChunk(index + 1, chunkList, currentRate, voice);
+        setTimeout(() => {
+          speakChunk(index + 1, chunkList, currentRate, voice, false);
+        }, 50);
       } else {
         setStatus('stopped');
         setCurrentChunkIndex(chunkList.length - 1);
@@ -345,8 +369,13 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
     utterance.onerror = (e) => {
       // 'canceled' e 'interrupted' son disparados intencionalmente al detener/cambiar
       if (e.error !== 'canceled' && e.error !== 'interrupted') {
-        setErrorMessage('Ocurrió un error con el sintetizador de voz de tu dispositivo.');
-        setStatus('paused');
+        if (index + 1 < chunkList.length) {
+          setTimeout(() => {
+            speakChunk(index + 1, chunkList, currentRate, voice, false);
+          }, 80);
+        } else {
+          setStatus('stopped');
+        }
       }
     };
 
@@ -376,7 +405,7 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
     setIsMinimized(false);
     setErrorMessage(null);
 
-    speakChunk(0, parsedChunks, rate, selectedVoice);
+    speakChunk(0, parsedChunks, rate, selectedVoice, true);
   }, [rate, selectedVoice, speakChunk]);
 
   const pause = useCallback(() => {
@@ -387,7 +416,7 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
 
   const resume = useCallback(() => {
     if (!synthRef.current || chunks.length === 0) return;
-    speakChunk(currentChunkIndex, chunks, rate, selectedVoice);
+    speakChunk(currentChunkIndex, chunks, rate, selectedVoice, true);
   }, [chunks, currentChunkIndex, rate, selectedVoice, speakChunk]);
 
   const stop = useCallback(() => {
@@ -410,7 +439,7 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
       const nextIdx = currentChunkIndex + 1;
       setCurrentChunkIndex(nextIdx);
       if (status === 'playing') {
-        speakChunk(nextIdx, chunks, rate, selectedVoice);
+        speakChunk(nextIdx, chunks, rate, selectedVoice, true);
       }
     }
   }, [currentChunkIndex, chunks, status, rate, selectedVoice, speakChunk]);
@@ -420,12 +449,12 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
       const prevIdx = currentChunkIndex - 1;
       setCurrentChunkIndex(prevIdx);
       if (status === 'playing') {
-        speakChunk(prevIdx, chunks, rate, selectedVoice);
+        speakChunk(prevIdx, chunks, rate, selectedVoice, true);
       }
     } else {
       // Reiniciar el fragmento actual
       if (status === 'playing') {
-        speakChunk(0, chunks, rate, selectedVoice);
+        speakChunk(0, chunks, rate, selectedVoice, true);
       }
     }
   }, [currentChunkIndex, chunks, status, rate, selectedVoice, speakChunk]);
@@ -434,7 +463,7 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
     if (index >= 0 && index < chunks.length) {
       setCurrentChunkIndex(index);
       if (status === 'playing') {
-        speakChunk(index, chunks, rate, selectedVoice);
+        speakChunk(index, chunks, rate, selectedVoice, true);
       }
     }
   }, [chunks, status, rate, selectedVoice, speakChunk]);
@@ -447,7 +476,7 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
 
     // Si está reproduciendo, reiniciar el fragmento actual con la nueva velocidad
     if (status === 'playing' && chunks.length > 0) {
-      speakChunk(currentChunkIndex, chunks, newRate, selectedVoice);
+      speakChunk(currentChunkIndex, chunks, newRate, selectedVoice, true);
     }
   }, [status, chunks, currentChunkIndex, selectedVoice, speakChunk]);
 
@@ -458,7 +487,7 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
     } catch (_) {}
 
     if (status === 'playing' && chunks.length > 0) {
-      speakChunk(currentChunkIndex, chunks, rate, newVoice);
+      speakChunk(currentChunkIndex, chunks, rate, newVoice, true);
     }
   }, [status, chunks, currentChunkIndex, rate, speakChunk]);
 
