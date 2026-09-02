@@ -61,6 +61,17 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     title,
     description,
     keywords,
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
+    },
     openGraph: {
       type: "article",
       title: rm?.og_title || yoast?.og_title || title,
@@ -68,9 +79,18 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       url: canonicalUrl,
       siteName: siteConfig.name,
       locale: "es_DO",
-      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: title }],
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 675,
+          alt: title,
+          type: "image/jpeg",
+        },
+      ],
       publishedTime: new Date(post.date).toISOString(),
-      authors: ["Jose Veras"],
+      modifiedTime: new Date(post.date).toISOString(),
+      authors: ["Redacción Montecristi"],
       section: categoryNames[0] || "Noticias",
     },
     twitter: {
@@ -78,6 +98,8 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       title: rm?.twitter_title || yoast?.twitter_title || title,
       description: rm?.twitter_description || yoast?.twitter_description || description,
       images: [twitterImageUrl],
+      creator: siteConfig.seo.twitterHandle,
+      site: siteConfig.seo.twitterHandle,
     },
     alternates: {
       canonical: canonicalUrl,
@@ -490,7 +512,12 @@ async function ArticleContent({ slug }: { slug: string }) {
         }),
         "headline": cleanHeadline,
         "description": cleanExcerpt,
-        "image": imageUrl ? [imageUrl] : [siteDefault],
+        "image": imageUrl ? [
+          imageUrl,
+          `${imageUrl}#16x9`,
+          `${imageUrl}#4x3`,
+          `${imageUrl}#1x1`
+        ] : [siteDefault],
         "datePublished": new Date(post.date).toISOString(),
         "dateModified": new Date(post.date).toISOString(),
         "inLanguage": "es-DO",
@@ -512,7 +539,8 @@ async function ArticleContent({ slug }: { slug: string }) {
             "url": `${siteConfig.url}/logo.svg`,
             "width": "420",
             "height": "80"
-          }
+          },
+          "publishingPrinciples": `${siteConfig.url}/aviso-legal`
         },
         "speakable": {
           "@type": "SpeakableSpecification",
