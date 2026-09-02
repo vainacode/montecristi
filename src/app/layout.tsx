@@ -127,6 +127,9 @@ export const metadata: Metadata = {
   facebook: {
     appId: siteConfig.seo.facebookAppId,
   },
+  other: {
+    'google-adsense-account': siteConfig.adsense.client,
+  },
 };
 
 export default async function RootLayout({
