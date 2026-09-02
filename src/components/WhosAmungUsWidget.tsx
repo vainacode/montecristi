@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
+import Script from 'next/script';
 
 interface WhosAmungUsWidgetProps {
   siteKey?: string;
   widgetId?: string;
-  type?: 'small' | 'classic' | 'micro';
+  type?: string;
   className?: string;
 }
 
@@ -15,47 +16,43 @@ export function WhosAmungUsWidget({
   type = 'small',
   className = '',
 }: WhosAmungUsWidgetProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    // Configurar objeto global _wau
-    (window as any)._wau = (window as any)._wau || [];
-    (window as any)._wau.push([type, siteKey, widgetId]);
-
-    // Inyectar script de waust.at si aún no existe
-    const scriptId = `wau-script-${siteKey}`;
-    if (!document.getElementById(scriptId)) {
-      const script = document.createElement('script');
-      script.id = scriptId;
-      script.src = 'https://waust.at/s.js';
-      script.async = true;
-      document.body.appendChild(script);
-    }
-  }, [siteKey, widgetId, type]);
-
   return (
-    <div className={`inline-flex items-center gap-2 ${className}`}>
-      {/* Contenedor oficial donde whos.amung.us inyecta el widget */}
-      <div ref={containerRef} id={`_wau${widgetId}`} className="min-h-[20px] flex items-center justify-center">
-        {/* Enlace e Imagen Fallback para renderizado instantáneo */}
+    <div className={`inline-flex items-center justify-center ${className}`}>
+      <div className="flex items-center gap-2.5 bg-black/60 border border-white/15 px-3 py-1.5 rounded-lg hover:border-[#BF1B23]/60 transition-colors shadow-sm">
         <a
           href={`https://whos.amung.us/stats/${siteKey}/`}
           target="_blank"
           rel="noopener noreferrer"
-          title="Usuarios en línea - whos.amung.us"
-          className="opacity-90 hover:opacity-100 transition-opacity flex items-center"
+          title="Ver visitantes en línea en Montecristi.net"
+          className="flex items-center gap-2 group cursor-pointer"
         >
+          {/* Indicador pulsante en vivo */}
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10b981]" />
+          </span>
+
+          {/* Contador en Vivo de whos.amung.us */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={`https://whos.amung.us/cwidget/${siteKey}/000000ffffff.png`}
-            alt="Contador de visitas en línea"
-            width={81}
-            height={20}
-            className="h-5 w-auto object-contain"
+            src={`https://whos.amung.us/swidget/${siteKey}.png`}
+            alt="Usuarios en línea - whos.amung.us"
+            width={80}
+            height={15}
+            className="h-4 w-auto object-contain opacity-95 group-hover:opacity-100 transition-opacity"
+            loading="lazy"
           />
         </a>
+
+        {/* Script oficial de registro de whos.amung.us */}
+        <Script id={`_wau${widgetId}`} strategy="afterInteractive">
+          {`var _wau = _wau || []; _wau.push(["small", "${siteKey}", "${widgetId}"]);`}
+        </Script>
+        <Script
+          id={`wau-script-${siteKey}`}
+          src="https://waust.at/s.js"
+          strategy="afterInteractive"
+        />
       </div>
     </div>
   );
