@@ -109,16 +109,19 @@ function formatContent(content: string, currentCategory = 'noticias') {
     .replace(/<div\b[^>]*class="[^"]*(?:ad-slot|ad-unit|ad_banner|wp-block-ad|anuncio|publicidad|adsbygoogle|banner-ad|ad-wrapper|code-block|advertisement)[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
     .replace(/<!--[\s\S]*?-->/g, ''); // comentarios de WordPress
 
-  // 2. ---- SANITIZACIÓN DE MARCA (Hacer que siempre pertenezca a Montecristi.net) ----
+  // 2. ---- SANITIZACIÓN DE MARCA Y FUENTES EXTERNAS (100% Montecristi.net) ----
   processed = processed
-    // Encabezados de agencia de noticias al inicio: "Diario al Día| ...", "Noticiario RD | ...", "Santos Vasquez Informa | ..."
-    .replace(/(?:Diario al D[ií]a|Noticiario RD|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa)\s*\|\s*/gi, 'Redacción Montecristi | ')
-    .replace(/(?:Diario al D[ií]a|Noticiario RD|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa)\s*[-–—]\s*/gi, 'Redacción Montecristi — ')
+    // Encabezados de agencia de noticias al inicio
+    .replace(/(?:Diario al D[ií]a|Noticiario RD|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa|Santos Vasquez|List[ií]n Diario|Diario Libre|El Caribe|El D[ií]a|Hoy Digital|CDN|SIN|Remolacha)\s*\|\s*/gi, '')
+    .replace(/(?:Diario al D[ií]a|Noticiario RD|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa|Santos Vasquez|List[ií]n Diario|Diario Libre|El Caribe|El D[ií]a|Hoy Digital|CDN|SIN|Remolacha)\s*[-–—]\s*/gi, '')
+    // Eliminar líneas de "Fuente:", "Tomado de:", "Vía:", "Créditos:"
+    .replace(/<p>\s*(?:Fuente|Tomado de|V[ií]a|Cr[eé]ditos|Foto|Redacci[oó]n|Autor)\s*:\s*[^<]*<\/p>/gi, '')
+    .replace(/\b(?:Fuente|Tomado de|V[ií]a|Cr[eé]ditos)\s*:\s*[^.\n<]+[.\n<]?/gi, '')
     // Referencias a la publicación en el cuerpo del texto
-    .replace(/\b(?:para|en|por|según|informó|reportó|exclusiva de)\s+(?:Noticiario RD|Diario al D[ií]a|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa)\b/gi, (match) => {
-      return match.replace(/(?:Noticiario RD|Diario al D[ií]a|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa)/gi, siteConfig.name);
+    .replace(/\b(?:para|en|por|según|informó|reportó|exclusiva de)\s+(?:Noticiario RD|Diario al D[ií]a|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa|Santos Vasquez)\b/gi, (match) => {
+      return match.replace(/(?:Noticiario RD|Diario al D[ií]a|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa|Santos Vasquez)/gi, siteConfig.name);
     })
-    .replace(/\b(?:Noticiario RD|Diario al D[ií]a|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa)\b/gi, siteConfig.name);
+    .replace(/\b(?:Noticiario RD|Diario al D[ií]a|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa|Santos Vasquez)\b/gi, siteConfig.name);
 
   // 3. ---- Convertir todos los <br> y saltos de línea de WordPress en párrafos reales ----
   processed = processed
