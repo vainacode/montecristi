@@ -77,10 +77,10 @@ export function Footer() {
         </div>
 
         {/* 6. Clean Bottom copyright & Whos.amung.us Counter */}
-        <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+        <div className="pt-8 border-t border-white/5 flex flex-col items-center justify-center gap-3 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
           <p>© {new Date().getFullYear()} MONTECRISTI. TODOS LOS DERECHOS RESERVADOS.</p>
-          <div className="flex items-center gap-3">
-            <WhosAmungUsWidget siteKey="uwed10c87e" widgetId="h2h" type="small" />
+          <div className="my-1 flex items-center justify-center min-h-[22px]">
+            <WhosAmungUsWidget siteKey="uwed10c87e" widgetId="h2h" />
           </div>
           <p>DESARROLLADO POR <span className="text-gray-300">BELLOTA HOSTING</span></p>
         </div>
