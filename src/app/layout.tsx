@@ -235,6 +235,16 @@ export default async function RootLayout({
         <meta name="ICBM" content="19.8486, -71.6456" />
       </head>
       <body className="antialiased bg-white text-gray-900 flex flex-col min-h-screen max-w-full overflow-x-clip">
+        {/* Google AdSense */}
+        {siteConfig.adsense.enabled && siteConfig.adsense.client && (
+          <Script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${siteConfig.adsense.client}`}
+            crossOrigin="anonymous"
+            strategy="afterInteractive"
+          />
+        )}
+
         {/* Google News (Subscribe with Google Basic) — Solo se activa si hay un Publication ID configurado para montecristi.net */}
         {siteConfig.googleNews.enabled && siteConfig.googleNews.publicationId && (
           <>

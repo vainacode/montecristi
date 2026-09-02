@@ -58,6 +58,12 @@ export const siteConfig = {
     serviceAccountKey: process.env.GA_PRIVATE_KEY ?? "",
   },
 
+  // ---- Google AdSense ----------------------------------------------------------------------------------------------------------------
+  adsense: {
+    enabled: true,
+    client: "ca-pub-7418549642678098",
+  },
+
   // ---- WordPress API & Feed ----------------------------------------------------------------------------------------------------------------------
   api: {
     wordpressUrl: "https://noticiariord.net/wp-json/wp/v2",
