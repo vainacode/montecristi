@@ -9,7 +9,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/api/'],
+        disallow: ['/api/', '/redaccion-fb', '/generador-facebook'],
       },
       // Motores de Búsqueda y Google News
       {
@@ -21,7 +21,7 @@ export default function robots(): MetadataRoute.Robots {
           'Applebot',
         ],
         allow: '/',
-        disallow: ['/api/'],
+        disallow: ['/api/', '/redaccion-fb', '/generador-facebook'],
       },
       // Motores de Inteligencia Artificial (ChatGPT, Perplexity, Gemini, Claude)
       {
@@ -37,7 +37,7 @@ export default function robots(): MetadataRoute.Robots {
           'cohere-ai',
         ],
         allow: '/',
-        disallow: ['/api/'],
+        disallow: ['/api/', '/redaccion-fb', '/generador-facebook'],
       },
     ],
     sitemap: [

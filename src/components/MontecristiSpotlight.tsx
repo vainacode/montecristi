@@ -2,7 +2,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { WPPost, getFeaturedImage, getCategorySlug } from '@/lib/wp';
 import { ProtectedImage } from './ProtectedImage';
-import { BroadcastCintillo } from './BroadcastCintillo';
 import { ArrowRight, Clock, Radio } from 'lucide-react';
 
 interface MontecristiSpotlightProps {
@@ -136,9 +135,6 @@ export function MontecristiSpotlight({ posts }: MontecristiSpotlightProps) {
                   className="object-cover group-hover:scale-105 transition-transform duration-700"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
                 />
-                
-                {/* Cintillo de Noticias Montecristi con Logo Oficial y Franja Roja */}
-                <BroadcastCintillo />
               </div>
 
               {/* Contenido de la tarjeta */}

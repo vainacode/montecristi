@@ -1,7 +1,6 @@
 import { WPPost, getFeaturedImage, getCategoryNames, getCategorySlug } from "@/lib/wp";
 import Link from "next/link";
 import { ProtectedImage } from "./ProtectedImage";
-import { BroadcastCintillo } from "./BroadcastCintillo";
 
 /**
  * Decodifica entidades HTML y elimina etiquetas para renderizar títulos de
@@ -60,9 +59,6 @@ export function NewsCard({
               sizes={variant === "hero" ? "(max-width: 768px) 100vw, (max-width: 1200px) 75vw, 60vw" : "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"}
               className="object-cover group-hover:scale-105 transition-transform duration-700"
             />
-            {showCintillo && (
-              <BroadcastCintillo />
-            )}
           </div>
         )}
 
