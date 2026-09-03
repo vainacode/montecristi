@@ -8,7 +8,7 @@ import sharp from "sharp";
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import { isSafeUrl } from "@/lib/security";
-import { getViralFontBase64 } from "@/lib/viral-font";
+import { renderHeadlineVector, renderBadgeVector, renderCintilloVector } from "@/lib/vector-text";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -194,167 +194,50 @@ export async function GET(req: NextRequest) {
     const safeQuote = escapeXml(quote);
     const safeAuthor = escapeXml(quoteAuthor);
 
-    // Dynamic SVG Overlay — LIMPIO Y CON FUENTE EMBEBIDA (EVITA '[]' EN LINUX/VERCEL)
-    const fontBase64 = getViralFontBase64();
+    // ── 1. Divisor fino si es split (Vector puro) ──
+    if (style === "split") {
+      const splitSvg = Buffer.from(`
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="shadowSlight" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.8"/>
+            </filter>
+          </defs>
+          <polygon points="597,0 603,0 603,${bannerTop} 597,${bannerTop}" fill="#ffffff" opacity="0.95" filter="url(#shadowSlight)"/>
+          <polygon points="599,0 601,0 601,${bannerTop} 599,${bannerTop}" fill="#BF1B23"/>
+        </svg>
+      `);
+      compositeList.push({ input: splitSvg, left: 0, top: 0 });
+    }
 
-    const overlaySvg = Buffer.from(`
-      <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          ${fontBase64 ? `
-          <style>
-            @font-face {
-              font-family: 'ViralFont';
-              src: url('data:font/truetype;charset=utf-8;base64,${fontBase64}') format('truetype');
-              font-weight: 900;
-              font-style: normal;
-            }
-            .viral-font {
-              font-family: 'ViralFont', Roboto, DejaVu Sans, Arial, sans-serif;
-            }
-          </style>
-          ` : `
-          <style>
-            .viral-font {
-              font-family: Roboto, DejaVu Sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-            }
-          </style>
-          `}
-          <filter id="shadowSlight" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.8"/>
-          </filter>
-          <filter id="shadowHeavy" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.95"/>
-          </filter>
-        </defs>
+    // ── 2. Insignia en esquina superior izquierda (Trazados vectoriales <path>, CERO <text>) ──
+    if (safeBadge) {
+      const badgeObj = await renderBadgeVector(safeBadge, style === "play");
+      compositeList.push({ input: badgeObj.buffer, left: 25, top: 22 });
+    }
 
-        ${style === "split" ? `
-        <!-- Divisor fino y elegante entre fotos -->
-        <polygon points="597,0 603,0 603,${bannerTop} 597,${bannerTop}" fill="#ffffff" opacity="0.95" filter="url(#shadowSlight)"/>
-        <polygon points="599,0 601,0 601,${bannerTop} 599,${bannerTop}" fill="#BF1B23"/>
-        ` : ''}
+    // ── 3. Titular de Alto Impacto (Trazados vectoriales <path>, CERO <text>) ──
+    if (safeHeadline) {
+      const headlineObj = await renderHeadlineVector(safeHeadline);
+      let headlineY: number;
+      if (headlinePos === "top") {
+        headlineY = 22;
+      } else if (headlinePos === "center") {
+        headlineY = Math.round(bannerTop / 2 - headlineObj.height / 2);
+      } else {
+        // "bottom" por defecto: sobre el cintillo sin tapar caras
+        headlineY = bannerTop - headlineObj.height - 10;
+      }
+      compositeList.push({
+        input: headlineObj.buffer,
+        left: Math.round((width - headlineObj.width) / 2),
+        top: headlineY,
+      });
+    }
 
-        ${safeBadge ? `
-        <!-- Insignia mínima y discreta en esquina superior izquierda -->
-        <g filter="url(#shadowSlight)">
-          <rect x="25" y="22" width="${Math.max(110, safeBadge.length * 10 + 35)}" height="32" rx="6" fill="#BF1B23" fill-opacity="0.92" stroke="#ffffff" stroke-width="1"/>
-          ${style === "play" ? `
-          <polygon points="38,32 48,38 38,44" fill="#FFFFFF"/>
-          <text x="54" y="43" class="viral-font" font-size="12px" font-weight="900" fill="#ffffff" letter-spacing="1px">
-            ${safeBadge}
-          </text>
-          ` : `
-          <circle cx="38" cy="38" r="4.5" fill="#FFE600"/>
-          <text x="49" y="43" class="viral-font" font-size="12px" font-weight="900" fill="#ffffff" letter-spacing="1px">
-            ${safeBadge}
-          </text>
-          `}
-        </g>
-        ` : ''}
-
-        <!-- TITULAR AUTO-AJUSTABLE CUBIERTO 100% EN AMARILLO -->
-        ${(() => {
-          if (!safeHeadline) return "";
-          const clean = safeHeadline.trim();
-
-          const calcBoxY = (boxH: number) => {
-            if (headlinePos === "top") return 22;
-            if (headlinePos === "center") return Math.round(bannerTop / 2 - boxH / 2);
-            // "bottom" por defecto: descansa elegantemente sobre el cintillo oficial sin tapar caras
-            return Math.round(bannerTop - boxH - 10);
-          };
-
-          if (clean.length <= 32) {
-            const fontSize = clean.length > 25 ? 26 : 30;
-            const textW = Math.round(clean.length * fontSize * 0.62);
-            const boxW = Math.min(width - 60, Math.max(360, textW + 65));
-            const boxH = 58;
-            const boxX = Math.round((width - boxW) / 2);
-            const boxY = calcBoxY(boxH);
-
-            return `
-            <g filter="url(#shadowHeavy)">
-              <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="10" fill="#FFE600" stroke="#000000" stroke-width="3"/>
-              <text x="600" y="${boxY + 39}" class="viral-font" font-size="${fontSize}px" font-weight="900" fill="#000000" text-anchor="middle" letter-spacing="0.5px">
-                ${clean}
-              </text>
-            </g>
-            `;
-          } else {
-            const words = clean.split(" ");
-            const line1: string[] = [];
-            const line2: string[] = [];
-            let curLen = 0;
-            const half = clean.length / 2;
-
-            for (const w of words) {
-              if (curLen + w.length <= half || line1.length === 0) {
-                line1.push(w);
-                curLen += w.length + 1;
-              } else {
-                line2.push(w);
-              }
-            }
-
-            const l1 = line1.join(" ");
-            const l2 = line2.join(" ");
-            const maxChars = Math.max(l1.length, l2.length);
-            const fontSize = 24;
-            const textW = Math.round(maxChars * fontSize * 0.62);
-            const boxW = Math.min(width - 60, Math.max(380, textW + 65));
-            const boxH = 92;
-            const boxX = Math.round((width - boxW) / 2);
-            const boxY = calcBoxY(boxH);
-
-            return `
-            <g filter="url(#shadowHeavy)">
-              <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="12" fill="#FFE600" stroke="#000000" stroke-width="3.5"/>
-              <text x="600" y="${boxY + 38}" class="viral-font" font-size="${fontSize}px" font-weight="900" fill="#000000" text-anchor="middle" letter-spacing="0.5px">
-                ${l1}
-              </text>
-              <text x="600" y="${boxY + 74}" class="viral-font" font-size="${fontSize}px" font-weight="900" fill="#000000" text-anchor="middle" letter-spacing="0.5px">
-                ${l2}
-              </text>
-            </g>
-            `;
-          }
-        })()}
-
-        ${safeQuote ? `
-        <!-- Cita opcional en la parte inferior si se especifica -->
-        <g filter="url(#shadowSlight)">
-          <rect x="35" y="${height - bannerH - 60}" width="650" height="48" rx="8" fill="#042564" fill-opacity="0.9" stroke="#FFE600" stroke-width="1.5"/>
-          <text x="50" y="${height - bannerH - 36}" class="viral-font" font-size="14px" font-weight="900" fill="#FFE600">
-            «${safeQuote}»
-          </text>
-          ${safeAuthor ? `
-          <text x="50" y="${height - bannerH - 18}" class="viral-font" font-size="11px" font-weight="700" fill="#E2E8F0">
-            — ${safeAuthor}
-          </text>
-          ` : ''}
-        </g>
-        ` : ''}
-
-        <!-- Cintillo Oficial Montecristi.net en la base (Siempre nítido) -->
-        <g>
-          <rect x="0" y="${bannerTop}" width="${width}" height="${bannerH}" fill="#042564" />
-          <polygon points="${width - bannerH * 2.8},${bannerTop} ${width},${bannerTop} ${width},${height} ${width - bannerH * 3.5},${height}" fill="#BF1B23" />
-          <circle cx="${width - bannerH * 0.85}" cy="${bannerTop + bannerH / 2}" r="${bannerH * 0.28}" fill="#ffffff" />
-          <circle cx="${width - bannerH * 0.85}" cy="${bannerTop + bannerH / 2}" r="${bannerH * 0.15}" fill="#BF1B23" />
-          
-          ${cachedIconSvg ? `
-          <svg x="${startX}" y="${bannerTop + iconY}" width="${iconSize}" height="${iconSize}" viewBox="0 0 23010 34725">
-            <g>${cachedIconSvg}</g>
-          </svg>
-          ` : ''}
-          
-          <text x="${cachedIconSvg ? textX : Math.round(availableCenter / 2)}" y="${bannerTop + textY}" class="viral-font" font-size="${textFontSize}px" font-weight="900" fill="#ffffff" text-anchor="${cachedIconSvg ? "start" : "middle"}" letter-spacing="1px">
-            MONTECRISTI<tspan font-weight="700" fill="#e2e8f0">.NET</tspan>
-          </text>
-        </g>
-      </svg>
-    `);
-
-    compositeList.push({ input: overlaySvg, left: 0, top: 0 });
+    // ── 4. Cintillo Oficial Montecristi.net en la base (Trazados vectoriales <path>) ──
+    const cintilloBuf = await renderCintilloVector(width, bannerH, cachedIconSvg);
+    compositeList.push({ input: cintilloBuf, left: 0, top: bannerTop });
 
     const baseSharp = sharp({
       create: { width, height, channels: 3, background: { r: 0, g: 0, b: 0 } }
