@@ -9,6 +9,7 @@ import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import { siteConfig } from "@/config/site";
 import { isSafeUrl } from "@/lib/security";
+import { getViralFontBase64 } from "@/lib/viral-font";
 
 // Usamos el logo vectorial oficial para la marca de agua
 const LOGO_SVG = join(process.cwd(), "public", "logo.svg");
@@ -135,9 +136,31 @@ export async function GET(req: NextRequest) {
     const availableCenter = (w - rightBannerWidth / 2);
     const startX = Math.round((availableCenter - groupWidth) / 2);
     const textX = startX + iconSize + gap;
+    const fontBase64 = getViralFontBase64();
 
     const cintilloSvg = Buffer.from(`
       <svg width="${w}" height="${bannerH}" viewBox="0 0 ${w} ${bannerH}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          ${fontBase64 ? `
+          <style>
+            @font-face {
+              font-family: 'ViralFont';
+              src: url('data:font/truetype;charset=utf-8;base64,${fontBase64}') format('truetype');
+              font-weight: 900;
+              font-style: normal;
+            }
+            .brand-font {
+              font-family: 'ViralFont', Roboto, DejaVu Sans, Arial, sans-serif;
+            }
+          </style>
+          ` : `
+          <style>
+            .brand-font {
+              font-family: Roboto, DejaVu Sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            }
+          </style>
+          `}
+        </defs>
         <rect x="0" y="0" width="${w}" height="${bannerH}" fill="#042564" />
         <polygon points="${w - bannerH * 2.8},0 ${w},0 ${w},${bannerH} ${w - bannerH * 3.5},${bannerH}" fill="#BF1B23" />
         <circle cx="${w - bannerH * 0.85}" cy="${bannerH / 2}" r="${bannerH * 0.28}" fill="#ffffff" />
@@ -147,7 +170,7 @@ export async function GET(req: NextRequest) {
           <g>${cachedIconSvg}</g>
         </svg>
         ` : ''}
-        <text x="${cachedIconSvg ? textX : Math.round(availableCenter / 2)}" y="${textY}" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="${textFontSize}px" font-weight="900" fill="#ffffff" text-anchor="${cachedIconSvg ? "start" : "middle"}" letter-spacing="1px">
+        <text x="${cachedIconSvg ? textX : Math.round(availableCenter / 2)}" y="${textY}" class="brand-font" font-size="${textFontSize}px" font-weight="900" fill="#ffffff" text-anchor="${cachedIconSvg ? "start" : "middle"}" letter-spacing="1px">
           MONTECRISTI<tspan font-weight="700" fill="#e2e8f0">.NET</tspan>
         </text>
       </svg>

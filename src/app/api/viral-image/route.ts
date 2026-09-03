@@ -8,6 +8,7 @@ import sharp from "sharp";
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import { isSafeUrl } from "@/lib/security";
+import { getViralFontBase64 } from "@/lib/viral-font";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -193,10 +194,31 @@ export async function GET(req: NextRequest) {
     const safeQuote = escapeXml(quote);
     const safeAuthor = escapeXml(quoteAuthor);
 
-    // Dynamic SVG Overlay — LIMPIO Y SIN SOBRECARGA
+    // Dynamic SVG Overlay — LIMPIO Y CON FUENTE EMBEBIDA (EVITA '[]' EN LINUX/VERCEL)
+    const fontBase64 = getViralFontBase64();
+
     const overlaySvg = Buffer.from(`
       <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
         <defs>
+          ${fontBase64 ? `
+          <style>
+            @font-face {
+              font-family: 'ViralFont';
+              src: url('data:font/truetype;charset=utf-8;base64,${fontBase64}') format('truetype');
+              font-weight: 900;
+              font-style: normal;
+            }
+            .viral-font {
+              font-family: 'ViralFont', Roboto, DejaVu Sans, Arial, sans-serif;
+            }
+          </style>
+          ` : `
+          <style>
+            .viral-font {
+              font-family: Roboto, DejaVu Sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            }
+          </style>
+          `}
           <filter id="shadowSlight" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.8"/>
           </filter>
@@ -217,12 +239,12 @@ export async function GET(req: NextRequest) {
           <rect x="25" y="22" width="${Math.max(110, safeBadge.length * 10 + 35)}" height="32" rx="6" fill="#BF1B23" fill-opacity="0.92" stroke="#ffffff" stroke-width="1"/>
           ${style === "play" ? `
           <polygon points="38,32 48,38 38,44" fill="#FFFFFF"/>
-          <text x="54" y="43" font-family="system-ui, -apple-system, sans-serif" font-size="12px" font-weight="900" fill="#ffffff" letter-spacing="1px">
+          <text x="54" y="43" class="viral-font" font-size="12px" font-weight="900" fill="#ffffff" letter-spacing="1px">
             ${safeBadge}
           </text>
           ` : `
           <circle cx="38" cy="38" r="4.5" fill="#FFE600"/>
-          <text x="49" y="43" font-family="system-ui, -apple-system, sans-serif" font-size="12px" font-weight="900" fill="#ffffff" letter-spacing="1px">
+          <text x="49" y="43" class="viral-font" font-size="12px" font-weight="900" fill="#ffffff" letter-spacing="1px">
             ${safeBadge}
           </text>
           `}
@@ -252,7 +274,7 @@ export async function GET(req: NextRequest) {
             return `
             <g filter="url(#shadowHeavy)">
               <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="10" fill="#FFE600" stroke="#000000" stroke-width="3"/>
-              <text x="600" y="${boxY + 39}" font-family="system-ui, -apple-system, sans-serif" font-size="${fontSize}px" font-weight="900" fill="#000000" text-anchor="middle" letter-spacing="0.5px">
+              <text x="600" y="${boxY + 39}" class="viral-font" font-size="${fontSize}px" font-weight="900" fill="#000000" text-anchor="middle" letter-spacing="0.5px">
                 ${clean}
               </text>
             </g>
@@ -286,10 +308,10 @@ export async function GET(req: NextRequest) {
             return `
             <g filter="url(#shadowHeavy)">
               <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="12" fill="#FFE600" stroke="#000000" stroke-width="3.5"/>
-              <text x="600" y="${boxY + 38}" font-family="system-ui, -apple-system, sans-serif" font-size="${fontSize}px" font-weight="900" fill="#000000" text-anchor="middle" letter-spacing="0.5px">
+              <text x="600" y="${boxY + 38}" class="viral-font" font-size="${fontSize}px" font-weight="900" fill="#000000" text-anchor="middle" letter-spacing="0.5px">
                 ${l1}
               </text>
-              <text x="600" y="${boxY + 74}" font-family="system-ui, -apple-system, sans-serif" font-size="${fontSize}px" font-weight="900" fill="#000000" text-anchor="middle" letter-spacing="0.5px">
+              <text x="600" y="${boxY + 74}" class="viral-font" font-size="${fontSize}px" font-weight="900" fill="#000000" text-anchor="middle" letter-spacing="0.5px">
                 ${l2}
               </text>
             </g>
@@ -301,11 +323,11 @@ export async function GET(req: NextRequest) {
         <!-- Cita opcional en la parte inferior si se especifica -->
         <g filter="url(#shadowSlight)">
           <rect x="35" y="${height - bannerH - 60}" width="650" height="48" rx="8" fill="#042564" fill-opacity="0.9" stroke="#FFE600" stroke-width="1.5"/>
-          <text x="50" y="${height - bannerH - 36}" font-family="system-ui, -apple-system, sans-serif" font-size="14px" font-weight="900" fill="#FFE600">
+          <text x="50" y="${height - bannerH - 36}" class="viral-font" font-size="14px" font-weight="900" fill="#FFE600">
             «${safeQuote}»
           </text>
           ${safeAuthor ? `
-          <text x="50" y="${height - bannerH - 18}" font-family="system-ui, -apple-system, sans-serif" font-size="11px" font-weight="700" fill="#E2E8F0">
+          <text x="50" y="${height - bannerH - 18}" class="viral-font" font-size="11px" font-weight="700" fill="#E2E8F0">
             — ${safeAuthor}
           </text>
           ` : ''}
@@ -325,7 +347,7 @@ export async function GET(req: NextRequest) {
           </svg>
           ` : ''}
           
-          <text x="${cachedIconSvg ? textX : Math.round(availableCenter / 2)}" y="${bannerTop + textY}" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="${textFontSize}px" font-weight="900" fill="#ffffff" text-anchor="${cachedIconSvg ? "start" : "middle"}" letter-spacing="1px">
+          <text x="${cachedIconSvg ? textX : Math.round(availableCenter / 2)}" y="${bannerTop + textY}" class="viral-font" font-size="${textFontSize}px" font-weight="900" fill="#ffffff" text-anchor="${cachedIconSvg ? "start" : "middle"}" letter-spacing="1px">
             MONTECRISTI<tspan font-weight="700" fill="#e2e8f0">.NET</tspan>
           </text>
         </g>
