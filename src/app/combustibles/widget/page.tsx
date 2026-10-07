@@ -1,14 +1,15 @@
 import React from 'react';
-import { fuelData } from '@/data/fuels';
+import { getFuelData } from '@/lib/fuels';
 
-export const revalidate = 300;
+export const revalidate = 10800;
 
 export const metadata = {
   title: 'CombustibleRD Widget',
   robots: 'noindex, follow',
 };
 
-export default function FuelWidgetPage() {
+export default async function FuelWidgetPage() {
+  const fuelData = await getFuelData();
   const topFuels = fuelData.fuels.slice(0, 6);
 
   return (

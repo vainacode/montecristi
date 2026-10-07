@@ -9,6 +9,7 @@ import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import { siteConfig } from "@/config/site";
 import { isSafeUrl } from "@/lib/security";
+import { resolveMediaPath } from "@/lib/media";
 import { renderCintilloVector } from "@/lib/vector-text";
 
 // Usamos el logo vectorial oficial para la marca de agua
@@ -32,7 +33,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const rawUrl = req.nextUrl.searchParams.get("url");
+  // Las fotos llegan como /media/<clave>/...; las resolvemos a su origen real en el servidor.
+  const rawParam = req.nextUrl.searchParams.get("url");
+  const rawUrl = rawParam ? resolveMediaPath(rawParam) : rawParam;
   const title = req.nextUrl.searchParams.get("title") || "montecristi";
   const download = req.nextUrl.searchParams.get("download") === "1";
   const format = req.nextUrl.searchParams.get("format") || "webp"; // "png" | "webp"

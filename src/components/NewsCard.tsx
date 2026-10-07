@@ -1,4 +1,4 @@
-import { WPPost, getFeaturedImage, getCategoryNames, getCategorySlug } from "@/lib/wp";
+import { WPPost, getFeaturedImage, getCategoryNames, getCategorySlug } from "@/lib/wp-helpers";
 import Link from "next/link";
 import { ProtectedImage } from "./ProtectedImage";
 

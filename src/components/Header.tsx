@@ -114,8 +114,8 @@ export function Header() {
     if (notifications.length > 0) return
     setLoadingNotifs(true)
 
-    const apiUrl = siteConfig.api.wordpressUrl
-    fetch(`${apiUrl}/posts?per_page=8&_embed=wp:term&_fields=id,title,slug,date,categories,_links,_embedded`)
+    // Pasamos por nuestra API: el navegador nunca habla directo con la fuente.
+    fetch('/api/posts?per_page=8')
       .then(r => r.json())
       .then(posts => {
         const parsed: NotificationPost[] = (posts as Array<{

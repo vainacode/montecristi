@@ -14,8 +14,8 @@ import {
   Eye,
   FileText
 } from 'lucide-react';
-import type { WPPost } from '@/lib/wp';
-import { getFeaturedImage, getCategoryNames } from '@/lib/wp';
+import type { WPPost } from '@/lib/wp-helpers';
+import { getFeaturedImage, getCategoryNames } from '@/lib/wp-helpers';
 import { siteConfig } from '@/config/site';
 
 interface PrintEditionProps {

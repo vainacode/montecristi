@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { WPPost, getCategorySlug } from '@/lib/wp';
+import { WPPost, getCategorySlug } from '@/lib/wp-helpers';
 
 interface NewsTickerProps {
   posts?: WPPost[];

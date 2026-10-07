@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { WPPost } from '@/lib/wp';
+import type { WPPost } from '@/lib/wp-helpers';
 import { NewsCard } from '@/components/NewsCard';
 import { ArrowDown, Loader2, CheckCircle2 } from 'lucide-react';
 

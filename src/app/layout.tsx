@@ -219,8 +219,6 @@ export default async function RootLayout({
         {/* Preconnects críticos para medios de WordPress */}
         <link rel="preconnect" href="https://i0.wp.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://i0.wp.com" />
-        <link rel="preconnect" href="https://noticiariord.net" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://noticiariord.net" />
         
         {/* Schema.org NewsMediaOrganization & WebSite */}
         <script

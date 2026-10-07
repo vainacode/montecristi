@@ -5,6 +5,7 @@ import { CustomAd } from "@/components/CustomAd";
 import { LoadMoreFeed } from "@/components/LoadMoreFeed";
 import { MostRead } from "@/components/MostRead";
 import { FuelWidget } from "@/components/FuelWidget";
+import { getFuelData } from "@/lib/fuels";
 import { MontecristiSpotlight } from "@/components/MontecristiSpotlight";
 import { MontecristiVideoSection } from "@/components/MontecristiVideoSection";
 import { siteConfig } from "@/config/site";
@@ -41,12 +42,25 @@ export default async function Home() {
 
 async function HomeContent() {
   // Peticiones en paralelo: artículos generales + artículos dedicados de Montecristi
-  const [allPosts, montecristiPosts] = await Promise.all([
-    getPosts({ per_page: 24 }),
-    getMontecristiPosts({ per_page: 4 })
-  ]).catch(() => [[], []]);
+  const [mainPosts, montecristiExtra, fuelData] = await Promise.all([
+    getPosts({ per_page: 24 }).catch(() => []),
+    getMontecristiPosts({ per_page: 24 }).catch(() => []),
+    getFuelData(),
+  ]);
+  const montecristiPosts = montecristiExtra.slice(0, 4);
 
-  if (!allPosts || allPosts.length === 0) {
+  // Si la fuente principal trae menos de 24 (p. ej. su RSS solo entrega 10), completamos
+  // la portada con las noticias de Montecristi, sin repetir y ordenadas por fecha.
+  let allPosts = mainPosts;
+  if (allPosts.length < 24) {
+    const seen = new Set(allPosts.map((p) => p.slug));
+    const filler = montecristiExtra.filter((p) => !seen.has(p.slug));
+    allPosts = [...allPosts, ...filler]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 24);
+  }
+
+  if (allPosts.length === 0) {
     return <ApiFallbackScreen />;
   }
 
@@ -170,7 +184,7 @@ async function HomeContent() {
             <aside className="lg:col-span-3 h-full relative">
               <div className="sticky top-32 flex flex-col gap-6">
                 <MostRead posts={mostRead} />
-                <FuelWidget />
+                <FuelWidget fuelData={fuelData} />
                 <CustomAd size="rectangle" position="homeSidebarFeedRect" />
                 <CustomAd size="vertical" position="homeSidebarFeedVert" />
               </div>

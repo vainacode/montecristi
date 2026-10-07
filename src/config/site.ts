@@ -66,10 +66,7 @@ export const siteConfig = {
 
   // ---- WordPress API & Feed ----------------------------------------------------------------------------------------------------------------------
   api: {
-    wordpressUrl: "https://deultimominuto.com/wp-json/wp/v2",
-    feedUrl: "https://deultimominuto.com/feed/",
-    montecristiUrl: "https://www.santosvasquezinforma.com/wp-json/wp/v2",
-    montecristiFeedUrl: "https://www.santosvasquezinforma.com/category/montecristi/feed/",
+    // Las URLs de las fuentes viven en src/config/sources.ts (solo servidor).
     montecristiCategoryId: 6,
     revalidate: 60,
   },

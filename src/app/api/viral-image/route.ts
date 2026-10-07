@@ -8,6 +8,7 @@ import sharp from "sharp";
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import { isSafeUrl } from "@/lib/security";
+import { resolveMediaPath } from "@/lib/media";
 import { renderHeadlineVector, renderBadgeVector, renderCintilloVector } from "@/lib/vector-text";
 
 export const runtime = "nodejs";
@@ -24,7 +25,8 @@ try {
   }
 } catch {}
 
-async function fetchImageBuffer(url: string): Promise<Buffer | null> {
+async function fetchImageBuffer(rawUrl: string): Promise<Buffer | null> {
+  const url = rawUrl ? resolveMediaPath(rawUrl) : rawUrl;
   if (!url || !isSafeUrl(url)) return null;
   try {
     const res = await fetch(url, {

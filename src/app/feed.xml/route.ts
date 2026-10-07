@@ -10,7 +10,10 @@ export async function GET() {
         .map((post) => {
             const catSlug = getCategorySlug(post);
             const url = `${siteConfig.url}/${catSlug}/${post.slug}`;
-            const imageUrl = getFeaturedImage(post);
+            const rawImage = getFeaturedImage(post);
+            const imageUrl = rawImage.startsWith("/") ? `${siteConfig.url}${rawImage}` : rawImage;
+            // Los lectores RSS no resuelven rutas relativas como /media/...
+            const content = post.content.rendered.replace(/(src|srcset|href)=(["'])\/(?!\/)/g, `$1=$2${siteConfig.url}/`);
             const description = post.excerpt.rendered.replace(/<[^>]*>/g, "").slice(0, 260);
 
             return `
@@ -22,7 +25,7 @@ export async function GET() {
           <dc:creator><![CDATA[Redacción Montecristi]]></dc:creator>
           <category><![CDATA[${catSlug.toUpperCase()}]]></category>
           <description><![CDATA[${description}]]></description>
-          <content:encoded><![CDATA[${post.content.rendered}]]></content:encoded>
+          <content:encoded><![CDATA[${content}]]></content:encoded>
           ${imageUrl ? `<media:content url="${imageUrl}" medium="image" width="1200" height="630"><media:title><![CDATA[${post.title.rendered.replace(/<[^>]*>/g, "")}]]></media:title></media:content>` : ""}
           ${imageUrl ? `<enclosure url="${imageUrl}" length="0" type="image/jpeg" />` : ""}
         </item>`;

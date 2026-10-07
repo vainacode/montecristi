@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
-import { fuelData } from '@/data/fuels';
+import { getFuelData } from '@/lib/fuels';
 
 export const dynamic = 'force-static';
-export const revalidate = 300;
+export const revalidate = 10800;
 
 export async function GET() {
+  const fuelData = await getFuelData();
   const topFuels = fuelData.fuels.slice(0, 6);
 
   const html = `<!DOCTYPE html>
@@ -177,7 +178,7 @@ export async function GET() {
       'Content-Type': 'text/html; charset=utf-8',
       'Access-Control-Allow-Origin': '*',
       'X-Frame-Options': 'ALLOWALL',
-      'Cache-Control': 'public, max-age=300, stale-while-revalidate=60',
+      'Cache-Control': 'public, max-age=1800, stale-while-revalidate=10800',
     },
   });
 }

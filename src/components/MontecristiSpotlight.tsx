@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { WPPost, getFeaturedImage, getCategorySlug } from '@/lib/wp';
+import { WPPost, getFeaturedImage, getCategorySlug } from '@/lib/wp-helpers';
 import { ProtectedImage } from './ProtectedImage';
 import { ArrowRight, Clock, Radio } from 'lucide-react';
 

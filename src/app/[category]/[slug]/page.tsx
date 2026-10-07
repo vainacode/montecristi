@@ -119,6 +119,8 @@ const SOURCE_DOMAINS = [
   'relojinformativo.do',
   'morroinformativo.com',
   'deultimominuto.net',
+  'losmocanos.com',
+  'www.losmocanos.com',
   'deultimominuto.com',
   'www.deultimominuto.com',
   'remolacha.net'
@@ -483,7 +485,9 @@ async function ArticleContent({ slug }: { slug: string }) {
     .filter(p => p.id !== post.id)
     .slice(0, 6);
 
-  const imageUrl = getFeaturedImage(post);
+  const rawImageUrl = getFeaturedImage(post);
+  // Las fotos son rutas propias (/media/...); el JSON-LD y Google necesitan URL absoluta.
+  const imageUrl = rawImageUrl.startsWith('/') ? `${siteConfig.url}${rawImageUrl}` : rawImageUrl;
   const categories = getCategoryNames(post);
   const catSlug = getCategorySlug(post);
   const postTags = post._embedded?.['wp:term']?.[1] || [];
@@ -692,7 +696,7 @@ async function ArticleContent({ slug }: { slug: string }) {
                   category: categories[0] || 'NOTICIAS',
                   slug: post.slug,
                   categorySlug: catSlug,
-                  imageUrl: imageUrl,
+                  imageUrl: rawImageUrl,
                   content: post.content.rendered,
                 }}
               />
@@ -701,7 +705,7 @@ async function ArticleContent({ slug }: { slug: string }) {
           <div className="lg:col-span-5 mt-6 lg:mt-0">
             <div className="relative aspect-[16/10] sm:aspect-[4/3] max-h-[320px] sm:max-h-none rounded-sm overflow-hidden shadow-2xl ring-1 ring-gray-200">
               <ProtectedImage
-                src={imageUrl}
+                src={rawImageUrl}
                 alt={post.title.rendered}
                 title={post.title.rendered}
                 fill

@@ -2,13 +2,14 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { fuelData } from '@/data/fuels';
+import type { FuelData } from '@/data/fuels';
 
 interface FuelWidgetProps {
   className?: string;
+  fuelData: FuelData;
 }
 
-export function FuelWidget({ className = '' }: FuelWidgetProps) {
+export function FuelWidget({ className = '', fuelData }: FuelWidgetProps) {
   // Tomamos los 6 combustibles principales exactamente como en el formato de referencia
   const displayFuels = fuelData.fuels.slice(0, 6);
 

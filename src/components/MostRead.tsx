@@ -1,5 +1,5 @@
-import type { WPPost } from '@/lib/wp';
-import { getFeaturedImage, getCategorySlug, getCategoryNames } from '@/lib/wp';
+import type { WPPost } from '@/lib/wp-helpers';
+import { getFeaturedImage, getCategorySlug, getCategoryNames } from '@/lib/wp-helpers';
 import Image from 'next/image';
 import Link from 'next/link';
 
