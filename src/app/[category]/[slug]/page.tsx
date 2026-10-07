@@ -402,14 +402,36 @@ function formatContent(content: string, currentCategory = 'noticias') {
     }
   );
 
-  // 12. ---- Lazy load + Centrar Imágenes ------------------------------------------------------------------------
+  // 12. ---- Reparar fuentes de imágenes -------------------------------------------------------------------------
+  // Los plugins de lazy-load de WordPress (Jetpack, LiteSpeed, WP Rocket) dejan la foto real en data-src /
+  // data-lazy-src y un placeholder en src, que sin su JS nunca se reemplaza. También forzamos https y no
+  // enviamos Referer para que la protección anti-hotlink del WordPress de origen no bloquee la foto.
+  processed = processed.replace(/<img\b([^>]*?)\/?>/gi, (_m, rawAttrs: string) => {
+    let attrs = rawAttrs;
+    const lazySrc = attrs.match(/\sdata-(?:lazy-src|src|orig-file|large-file)=["']([^"']+)["']/i)?.[1];
+    const currentSrc = attrs.match(/\ssrc=["']([^"']*)["']/i)?.[1] ?? '';
+    if (lazySrc && (!currentSrc || currentSrc.startsWith('data:') || /lazy|placeholder|blank\.gif/i.test(currentSrc))) {
+      attrs = currentSrc ? attrs.replace(/\ssrc=["'][^"']*["']/i, ` src="${lazySrc}"`) : `${attrs} src="${lazySrc}"`;
+      const lazySrcset = attrs.match(/\sdata-(?:lazy-)?srcset=["']([^"']+)["']/i)?.[1];
+      attrs = attrs.replace(/\ssrcset=["'][^"']*["']/i, '');
+      if (lazySrcset) attrs += ` srcset="${lazySrcset}"`;
+    }
+    attrs = attrs
+      .replace(/\s(src|srcset)=(["'])([^"']*)\2/gi, (_a, name: string, q: string, value: string) =>
+        ` ${name}=${q}${value.replace(/(^|,\s*)\/\//g, '$1https://').replace(/http:\/\//g, 'https://')}${q}`)
+      .replace(/\sdata-(?:lazy-src|src|lazy-srcset|srcset)=["'][^"']*["']/gi, '')
+      .replace(/\sreferrerpolicy=["'][^"']*["']/gi, '');
+    return `<img${attrs} referrerpolicy="no-referrer">`;
+  });
+
+  // 13. ---- Lazy load + Centrar Imágenes ------------------------------------------------------------------------
   processed = processed.replace(/<img(?![^>]*\bloading\b)([^>]*)\/?>/gi, (match, attrs) => `<img loading="lazy" decoding="async"${attrs}>`);
   processed = processed.replace(/<img([^>]*)\/?>/gi, (_m, attrs) => {
     if (/style=/.test(attrs)) return `<img${attrs.replace(/style="([^"]*)"/, 'style="$1;display:block;margin-left:auto;margin-right:auto"')}>`;
     return `<img${attrs} style="display:block;margin-left:auto;margin-right:auto">`;
   });
 
-  // 13. ---- Limpiar WordPress CMS Markers ----------------------------------------------------------------------
+  // 14. ---- Limpiar WordPress CMS Markers ----------------------------------------------------------------------
   processed = processed
     .replace(/\sclass="([^"]*)"/gi, (_, classValue) => {
       const cleaned = classValue.replace(/\bwp-block-\S+/g, '').replace(/\bhas-\S*-background-color\S*/g, '').replace(/\bis-layout-\S+/g, '').replace(/\bwp-[a-z][a-z-]*\b/g, '').replace(/\s{2,}/g, ' ').trim();
@@ -417,7 +439,7 @@ function formatContent(content: string, currentCategory = 'noticias') {
     })
     .replace(/data-wp-[^=\s]*="[^"]*"\s*/gi, '');
 
-  // 14. ---- Marca de Agua Invisible (Anti-Scraping) ------------------------------------------------------------
+  // 15. ---- Marca de Agua Invisible (Anti-Scraping) ------------------------------------------------------------
   const watermark = `<div style="display:none;font-size:1px;color:transparent;opacity:0;">Este contenido pertenece a ${siteConfig.name} - ${siteConfig.url}. Prohibida su reproducción no autorizada.</div>`;
   
   return processed + watermark;

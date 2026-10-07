@@ -73,6 +73,15 @@ async function refreshCache<T>(
   return promise;
 }
 
+// Algunos WordPress (Wordfence, LiteSpeed, Cloudflare) bloquean peticiones con el
+// User-Agent por defecto de Node ("node"/"undici") y responden 403 o una página HTML
+// de desafío. Enviamos cabeceras de navegador para que la API responda con JSON.
+const WP_HEADERS: HeadersInit = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+  "Accept": "application/json, text/plain, */*",
+  "Accept-Language": "es-DO,es;q=0.9,en;q=0.8",
+};
+
 // Función de fetch con timeout para evitar que la web se quede cargando infinito
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 12000) {
   const controller = new AbortController();
@@ -80,6 +89,7 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout 
   try {
     const response = await fetch(url, {
       ...options,
+      headers: { ...WP_HEADERS, ...(options.headers || {}) },
       signal: controller.signal
     });
     clearTimeout(id);
@@ -88,6 +98,27 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout 
     clearTimeout(id);
     throw error;
   }
+}
+
+// Pide un JSON a WordPress con un reintento. Lanza error si la respuesta no es
+// válida, para que la caché no guarde un resultado vacío por un fallo temporal.
+async function fetchWPJson<T = unknown>(url: string, revalidate: number): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetchWithTimeout(url, { next: { revalidate } });
+      if (!res.ok) throw new Error(`HTTP ${res.status} en ${url}`);
+      const text = await res.text();
+      try {
+        return JSON.parse(text.replace(/^\uFEFF/, "")) as T;
+      } catch {
+        throw new Error(`Respuesta no JSON en ${url}: ${text.slice(0, 120)}`);
+      }
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  throw lastError;
 }
 
 function slugify(text: string): string {
@@ -200,19 +231,17 @@ export async function getPosts(params: {
 
   const cacheKey = `posts:${query.toString()}`;
 
-  return cachedFetch(cacheKey, async () => {
+  const posts = await cachedFetch(cacheKey, async () => {
     try {
-      const res = await fetchWithTimeout(`${BASE_URL}/posts?${query.toString()}`, {
-        next: { revalidate: siteConfig.api.revalidate },
-      });
-
-      if (!res.ok) return [];
-      return await res.json();
+      const data = await fetchWPJson<WPPost[]>(`${BASE_URL}/posts?${query.toString()}`, siteConfig.api.revalidate);
+      if (!Array.isArray(data)) throw new Error('La API de posts no devolvió una lista');
+      return data;
     } catch (e) {
       console.error('[WP] Error fetching posts:', e);
-      return [];
+      throw e;
     }
   }, siteConfig.api.revalidate);
+  return Array.isArray(posts) ? posts : [];
 }
 
 export async function getMontecristiPosts(params: {
@@ -236,19 +265,17 @@ export async function getMontecristiPosts(params: {
   const cacheKey = `montecristi:posts:${query.toString()}`;
   const montecristiBase = siteConfig.api.montecristiUrl || "https://www.santosvasquezinforma.com/wp-json/wp/v2";
 
-  return cachedFetch(cacheKey, async () => {
+  const posts = await cachedFetch(cacheKey, async () => {
     try {
-      const res = await fetchWithTimeout(`${montecristiBase}/posts?${query.toString()}`, {
-        next: { revalidate: siteConfig.api.revalidate },
-      });
-      if (!res.ok) return [];
-      const posts = await res.json();
-      return Array.isArray(posts) ? posts : [];
+      const data = await fetchWPJson<WPPost[]>(`${montecristiBase}/posts?${query.toString()}`, siteConfig.api.revalidate);
+      if (!Array.isArray(data)) throw new Error('La API de Montecristi no devolvió una lista');
+      return data;
     } catch (e) {
       console.error('[WP] Error fetching Montecristi posts:', e);
-      return [];
+      throw e;
     }
   }, siteConfig.api.revalidate);
+  return Array.isArray(posts) ? posts : [];
 }
 
 export async function getPostBySlug(slug: string): Promise<WPPost | null> {
@@ -303,19 +330,17 @@ export async function getPostBySlug(slug: string): Promise<WPPost | null> {
 export async function getCategories(): Promise<WPCategory[]> {
   const cacheKey = 'categories:all';
 
-  return cachedFetch(cacheKey, async () => {
+  const categories = await cachedFetch(cacheKey, async () => {
     try {
-      const res = await fetchWithTimeout(`${BASE_URL}/categories?per_page=50`, {
-        next: { revalidate: 86400 }, // Cache for 24 hours
-      });
-
-      if (!res.ok) return [];
-      return await res.json();
+      const data = await fetchWPJson<WPCategory[]>(`${BASE_URL}/categories?per_page=50`, 86400); // Cache for 24 hours
+      if (!Array.isArray(data)) throw new Error('La API de categorías no devolvió una lista');
+      return data;
     } catch (e) {
       console.error('[WP] Error fetching categories:', e);
-      return [];
+      throw e;
     }
   }, 86400);
+  return Array.isArray(categories) ? categories : [];
 }
 
 export async function getMedia(id: number) {
@@ -342,7 +367,21 @@ export async function getTrendingPosts(): Promise<WPPost[]> {
   return [];
 }
 
+// Las URLs que vienen de WordPress a veces llegan como "http://", "//host/..." o
+// con entidades HTML ("&amp;"). En un sitio HTTPS eso rompe la carga de la foto.
+export function normalizeImageUrl(url: string | null | undefined): string {
+  if (!url) return "";
+  let clean = url.trim().replace(/&amp;/g, "&").replace(/&#0?38;/g, "&");
+  if (clean.startsWith("//")) clean = `https:${clean}`;
+  if (clean.startsWith("http://")) clean = `https://${clean.slice(7)}`;
+  return clean;
+}
+
 export function getFeaturedImage(post: WPPost): string {
+  return normalizeImageUrl(getRawFeaturedImage(post));
+}
+
+function getRawFeaturedImage(post: WPPost): string {
   // 1. De Último Minuto API featured media
   if (post.dum_api?.featured_media_url) return post.dum_api.featured_media_url;
 

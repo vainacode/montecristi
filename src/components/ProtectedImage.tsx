@@ -36,6 +36,9 @@ export function ProtectedImage({
 }: ProtectedImageProps) {
   const [loaded, setLoaded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
+  // Si el optimizador de Next (/_next/image) falla —cuota de Vercel agotada o el
+  // WordPress de origen bloquea al servidor— reintentamos cargando la foto directa.
+  const [useDirect, setUseDirect] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuPos | null>(null);
@@ -193,7 +196,16 @@ export function ProtectedImage({
         fetchPriority={priority ? 'high' : undefined}
         loading={priority ? undefined : 'lazy'}
         onLoad={() => setLoaded(true)}
-        onError={() => setImageFailed(true)}
+        unoptimized={useDirect}
+        referrerPolicy={useDirect ? 'no-referrer' : undefined}
+        onError={() => {
+          if (!useDirect && src && /^https?:\/\//.test(src)) {
+            setLoaded(false);
+            setUseDirect(true);
+          } else {
+            setImageFailed(true);
+          }
+        }}
         draggable={false}
         sizes={sizes || "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"}
       />
