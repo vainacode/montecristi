@@ -1,6 +1,3 @@
-'use client';
-
-import React from 'react';
 import Script from 'next/script';
 
 interface WhosAmungUsWidgetProps {
@@ -9,39 +6,28 @@ interface WhosAmungUsWidgetProps {
   className?: string;
 }
 
+/**
+ * Contador de whos.amung.us dentro del footer.
+ *
+ * El script de amung (s.js) dibuja el contador junto a la etiqueta
+ * <script id="_wau{widgetId}">. Antes esa etiqueta la insertaba next/script al final
+ * del <body>, así que salía un segundo contador abajo de todo además de la imagen
+ * del footer. Ahora la etiqueta se renderiza aquí, en su lugar, y es el único contador.
+ */
 export function WhosAmungUsWidget({
   siteKey = 'uwed10c87e',
   widgetId = 'h2h',
   className = '',
 }: WhosAmungUsWidgetProps) {
   return (
-    <div className={`inline-flex items-center justify-center ${className}`}>
-      <a
-        href={`https://whos.amung.us/stats/${siteKey}/`}
-        target="_blank"
-        rel="noopener noreferrer"
-        title="Usuarios en línea - whos.amung.us"
-        className="inline-flex items-center hover:opacity-100 opacity-90 transition-opacity"
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={`https://whos.amung.us/swidget/${siteKey}.png`}
-          alt="Usuarios en línea"
-          width={80}
-          height={15}
-          className="h-[15px] w-auto object-contain"
-        />
-      </a>
-
-      {/* Script en segundo plano para sincronizar analíticas activas */}
-      <Script id={`_wau${widgetId}`} strategy="lazyOnload">
-        {`var _wau = _wau || []; _wau.push(["small", "${siteKey}", "${widgetId}"]);`}
-      </Script>
-      <Script
-        id={`wau-script-${siteKey}`}
-        src="https://waust.at/s.js"
-        strategy="lazyOnload"
+    <div className={`inline-flex min-h-[15px] items-center justify-center ${className}`}>
+      <script
+        id={`_wau${widgetId}`}
+        dangerouslySetInnerHTML={{
+          __html: `var _wau = _wau || []; _wau.push(["small", "${siteKey}", "${widgetId}"]);`,
+        }}
       />
+      <Script id={`wau-script-${siteKey}`} src="https://waust.at/s.js" strategy="lazyOnload" />
     </div>
   );
 }

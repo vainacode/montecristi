@@ -544,22 +544,42 @@ figcaption {
   header,
   footer,
   nav,
+  .fixed,
   .print\:hidden,
   #news-ticker,
   .scroll-to-top {
     display: none !important;
   }
 
+  /* Sin el hueco de la cabecera fija del sitio */
+  main {
+    padding-top: 0 !important;
+  }
+
   article {
-    break-after: page !important;
-    page-break-after: always !important;
-    min-height: 100vh !important;
     box-shadow: none !important;
     border: none !important;
     padding: 0 !important;
     margin: 0 !important;
     max-width: 100% !important;
     width: 100% !important;
+  }
+
+  /* Edición impresa: una plana por hoja tabloide (formato de periódico). La escala la
+     calcula PrintEditionReader antes de imprimir para que cada plana quepa completa. */
+  .print-plana {
+    page: periodico;
+    zoom: var(--print-zoom, 1) !important;
+    break-inside: avoid;
+  }
+
+  .print-plana + .print-plana {
+    break-before: page;
+  }
+
+  @page periodico {
+    size: 11in 17in;
+    margin: 0.4in;
   }
 
   img {

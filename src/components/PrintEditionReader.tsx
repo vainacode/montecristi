@@ -1,147 +1,259 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { Printer, ChevronLeft, ChevronRight, Share2, Check, ZoomIn, ZoomOut, Newspaper, Eye } from 'lucide-react';
 import type { WPPost } from '@/lib/wp-helpers';
-import { getFeaturedImage, getCategoryNames, isLocalImage } from '@/lib/wp-helpers';
+import { getFeaturedImage, getCategoryNames, getCategorySlug, isLocalImage, toPlainText } from '@/lib/wp-helpers';
 import { siteConfig } from '@/config/site';
 
 interface PrintEditionProps {
   generalPosts?: WPPost[];
   montecristiPosts?: WPPost[];
-  posts?: WPPost[];
   dateStr: string;
   editionNumber: number;
 }
 
-/**
- * Limpia y purifica el texto para versión 100% IMPRESA:
- * - Elimina tags HTML, scripts, iframes y enlaces web.
- * - Elimina coletillas ("leer más", "sigue leyendo", "P. 3", etc.).
- * - Sanitiza créditos de marcas ajenas a "Redacción Montecristi".
- * - Entrega párrafos sólidos para maquetación en columnas periodísticas.
- */
-function getPrintParagraphs(htmlStr: string): string[] {
-  if (!htmlStr) return [];
-  const clean = htmlStr
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+// ── Modelo de la edición ─────────────────────────────────────────────────────
+
+interface Story {
+  key: string;
+  title: string;
+  deck: string;
+  category: string;
+  image: string;
+  url: string;
+  paragraphs: string[];
+  truncated: boolean;
+}
+
+interface Plana {
+  num: number;
+  section: string;
+  color: string;
+  stories: Story[];
+  ad: string;
+}
+
+const MAX_PAGES = 8;
+const SECTION_COLORS = ['#BF1B23', '#042564', '#8A1017', '#0f766e', '#7c3aed', '#b45309', '#16a34a'];
+const SQUARE_ADS = ['/ads/300x250-03.jpg', '/ads/Bandera-300-x-250.jpg'];
+
+// Presupuesto de palabras por tipo de nota: mantiene las planas parejas.
+const WORDS_COVER_LEAD = 330;
+const WORDS_COVER_BRIEF = 70;
+const WORDS_LEAD = 300;
+const WORDS_SECONDARY = 140;
+
+const SOURCE_BRANDS = /(?:Diario al D[ií]a|Noticiario RD|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa)\s*[|\-–—]\s*/gi;
+
+/** HTML de WordPress → párrafos limpios para imprimir (sin imágenes, embeds ni coletillas). */
+function getPrintParagraphs(html: string): string[] {
+  if (!html) return [];
+  const clean = html
+    .replace(/<(script|style|iframe|figure|figcaption|blockquote class="(?:instagram|twitter)[^"]*")\b[\s\S]*?<\/\1>/gi, '')
     .replace(/<img[^>]*>/gi, '')
-    .replace(/<a\b[^>]*>(.*?)<\/a>/gi, '$1')
-    .replace(/\((?:sigue leyendo|leer m[aá]s|read more|ver m[aá]s|clic aqu[ií]|foto:[^)]+|P\.\s*\d+)\s*…?\)/gi, '')
-    .replace(/(?:Diario al D[ií]a|Noticiario RD|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa)\s*\|\s*/gi, 'Redacción Montecristi | ')
-    .replace(/(?:Diario al D[ií]a|Noticiario RD|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa)\s*[-–—]\s*/gi, 'Redacción Montecristi — ')
     .replace(/(?:<br\s*\/?>\s*)+/gi, '</p><p>');
 
-  const raw = clean
+  return clean
     .split(/<\/(?:p|div|h\d|li)>/i)
-    .map(p =>
-      p
-        .replace(/<[^>]+>/g, '')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
-        .replace(/&quot;/g, '"')
-        .replace(/&#039;/g, "'")
-        .replace(/&#8220;/g, '“')
-        .replace(/&#8221;/g, '”')
-        .replace(/&#8216;/g, '‘')
-        .replace(/&#8217;/g, '’')
-        .replace(/&#8211;/g, '–')
-        .replace(/&#8212;/g, '—')
-        .trim()
+    .map((p) =>
+      toPlainText(p)
+        .replace(/\((?:sigue leyendo|leer m[aá]s|read more|ver m[aá]s|clic aqu[ií]|foto:[^)]+|P\.\s*\d+)\s*…?\)/gi, '')
+        .replace(SOURCE_BRANDS, 'Redacción Montecristi — ')
+        .trim(),
     )
-    .filter(p => p.length > 20);
-
-  if (raw.length > 0) return raw;
-
-  const plain = htmlStr.replace(/<[^>]+>/g, '').trim();
-  return plain ? [plain] : [];
+    .filter((p) => p.length > 30 && !/^(?:Fuente|Foto|Tomado de|V[ií]a)\s*:/i.test(p));
 }
 
-function cleanTitle(str: string): string {
-  if (!str) return '';
-  return str
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#039;/g, "'")
-    .replace(/&#8220;/g, '“')
-    .replace(/&#8221;/g, '”')
-    .replace(/&#8216;/g, '‘')
-    .replace(/&#8217;/g, '’')
-    .replace(/&#8211;/g, '–')
-    .replace(/&#8212;/g, '—')
-    .trim();
+/** Toma párrafos completos hasta llenar el presupuesto de palabras (mínimo uno). */
+function takeWords(paragraphs: string[], maxWords: number): { paragraphs: string[]; truncated: boolean } {
+  const out: string[] = [];
+  let words = 0;
+  for (const p of paragraphs) {
+    const count = p.split(/\s+/).length;
+    if (out.length > 0 && words + count > maxWords) return { paragraphs: out, truncated: true };
+    out.push(p);
+    words += count;
+  }
+  return { paragraphs: out, truncated: false };
 }
 
-export function PrintEditionReader({
-  generalPosts = [],
-  montecristiPosts = [],
-  posts = [],
-  dateStr,
-  editionNumber
-}: PrintEditionProps) {
+function toStory(post: WPPost, maxWords: number): Story {
+  const all = getPrintParagraphs(post.content?.rendered || post.excerpt?.rendered || '');
+  const { paragraphs, truncated } = takeWords(all, maxWords);
+  const deck = toPlainText(post.excerpt?.rendered).replace(/\s*\[…\]|\s*\[\.\.\.\]/g, '…');
+  return {
+    key: `${post.id}-${post.slug}`,
+    title: toPlainText(post.title.rendered),
+    deck: deck.length > 220 ? `${deck.slice(0, 217).trimEnd()}…` : deck,
+    category: getCategoryNames(post)[0] || 'Actualidad',
+    image: getFeaturedImage(post),
+    url: `${siteConfig.url.replace(/^https?:\/\//, '')}/${getCategorySlug(post)}/${post.slug}`,
+    paragraphs,
+    truncated,
+  };
+}
+
+/**
+ * Arma las planas sin repetir noticias:
+ * 1. Portada con las 4 principales.
+ * 2. Montecristi con las noticias locales.
+ * 3. Una plana por cada categoría con 3+ notas; el resto en planas de Actualidad.
+ * Si no hay suficientes noticias, la edición tiene menos planas (nunca repite).
+ */
+function buildEdition(general: WPPost[], local: WPPost[]): { cover: Story[]; planas: Plana[] } {
+  const used = new Set<string>();
+  const take = (posts: WPPost[], n: number) => {
+    const picked: WPPost[] = [];
+    for (const p of posts) {
+      if (picked.length >= n) break;
+      if (used.has(p.slug)) continue;
+      used.add(p.slug);
+      picked.push(p);
+    }
+    return picked;
+  };
+
+  const coverPosts = take(general, 4);
+  const cover = coverPosts.map((p, i) => toStory(p, i === 0 ? WORDS_COVER_LEAD : WORDS_COVER_BRIEF));
+
+  const groups: { section: string; posts: WPPost[] }[] = [];
+  const localPosts = take(local, 5);
+  if (localPosts.length >= 2) groups.push({ section: 'Montecristi & la Línea Noroeste', posts: localPosts });
+
+  const remaining = general.filter((p) => !used.has(p.slug));
+  const byCategory = new Map<string, WPPost[]>();
+  for (const p of remaining) {
+    const cat = getCategoryNames(p)[0] || 'Actualidad';
+    byCategory.set(cat, [...(byCategory.get(cat) ?? []), p]);
+  }
+  for (const [cat, posts] of byCategory) {
+    if (posts.length >= 3) groups.push({ section: cat, posts: take(posts, 5) });
+  }
+  const leftovers = remaining.filter((p) => !used.has(p.slug));
+  for (let i = 0; i + 3 <= leftovers.length; i += 5) {
+    groups.push({ section: 'Actualidad', posts: take(leftovers.slice(i, i + 5), 5) });
+  }
+
+  const planas = groups.slice(0, MAX_PAGES - 1).map((g, i) => ({
+    num: i + 2,
+    section: g.section.toUpperCase(),
+    color: SECTION_COLORS[i % SECTION_COLORS.length],
+    stories: g.posts.map((p, j) => toStory(p, j === 0 ? WORDS_LEAD : WORDS_SECONDARY)),
+    ad: SQUARE_ADS[i % SQUARE_ADS.length],
+  }));
+
+  return { cover, planas };
+}
+
+// ── Piezas de maquetación ────────────────────────────────────────────────────
+
+function StoryImage({ src, alt, ratio = 'aspect-[4/3]', priority = false }: { src: string; alt: string; ratio?: string; priority?: boolean }) {
+  const finalSrc = src || siteConfig.seo.defaultImage;
+  return (
+    <div className={`relative ${ratio} w-full overflow-hidden border border-gray-300 bg-gray-100`}>
+      <Image
+        src={finalSrc}
+        alt={alt}
+        fill
+        priority={priority}
+        unoptimized={!isLocalImage(finalSrc)}
+        sizes="(max-width: 768px) 100vw, 640px"
+        className="object-cover"
+      />
+    </div>
+  );
+}
+
+function Paragraphs({ story, dropCapColor }: { story: Story; dropCapColor?: string }) {
+  return (
+    <>
+      {story.paragraphs.map((para, idx) => (
+        <p key={idx} className="mb-2.5">
+          {idx === 0 && dropCapColor ? (
+            <>
+              {/* Letra capital de periódico */}
+              <span className="float-left mr-2 mt-0.5 font-serif text-[3.2em] font-black leading-[0.82]" style={{ color: dropCapColor }}>
+                {para.charAt(0)}
+              </span>
+              {para.slice(1)}
+            </>
+          ) : (
+            para
+          )}
+        </p>
+      ))}
+      {story.truncated && (
+        <p className="mb-3 break-words text-left font-sans text-[10px] font-bold uppercase tracking-wide text-gray-500 [text-align-last:left]">
+          Continúa en {story.url}
+        </p>
+      )}
+    </>
+  );
+}
+
+function PageFooter({ left, right, color }: { left: string; right: string; color: string }) {
+  return (
+    <div className="mt-4 flex items-center justify-between border-t border-black pt-2 text-[9px] font-bold uppercase tracking-wider text-gray-600">
+      <span>{left}</span>
+      <span className="hidden sm:inline">San Fernando de Montecristi · República Dominicana</span>
+      <span className="font-black" style={{ color }}>{right}</span>
+    </div>
+  );
+}
+
+function BottomBanner() {
+  return (
+    <div className="mt-4 border-t-2 border-black pt-3">
+      <Image src="/ads/Bandera-970-X-90.jpg" alt="Publicidad" width={970} height={90} className="block h-auto w-full" />
+    </div>
+  );
+}
+
+const PAGE_CLASS =
+  'w-full max-w-[980px] bg-white p-5 sm:p-8 text-[#111111] shadow-[0_30px_90px_rgba(0,0,0,0.6)] border border-gray-300 print:max-w-none print:border-none print:p-0 print:shadow-none';
+
+// Columnas balanceadas: el navegador reparte el texto para que todas terminen a la misma altura.
+// Al imprimir, el ancho de "pantalla" es el de la hoja (979 px < lg), así que forzamos las 3 columnas.
+const FLOW_CLASS = 'columns-1 sm:columns-2 lg:columns-3 print:columns-3 gap-6 [column-fill:balance] [column-rule:1px_solid_#e5e7eb]';
+
+// ── Componente ───────────────────────────────────────────────────────────────
+
+export function PrintEditionReader({ generalPosts = [], montecristiPosts = [], dateStr, editionNumber }: PrintEditionProps) {
+  const { cover, planas } = useMemo(() => buildEdition(generalPosts, montecristiPosts), [generalPosts, montecristiPosts]);
+  const totalPages = 1 + planas.length;
+
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [copied, setCopied] = useState<boolean>(false);
   const [viewAllPages, setViewAllPages] = useState<boolean>(false);
 
-  // Unificamos las fuentes asegurando noticias completas
-  const allGeneral = generalPosts.length > 0 ? generalPosts : posts;
-  const allLocal = montecristiPosts.length > 0 ? montecristiPosts : allGeneral.slice(8);
+  const isVisible = (num: number) => viewAllPages || currentPage === num;
+  // `zoom` sí cambia el espacio que ocupa la plana (transform: scale dejaba huecos).
+  const pageStyle: React.CSSProperties = { zoom: zoomLevel / 100 };
 
-  // 8 Páginas completas (cuadernillo tradicional de imprenta)
-  const totalPages = 8;
-
-  // ── REPARTO EDITORIAL PARA 8 PÁGINAS COMPLETAS ────────────────────────────
-  // PÁG 1: PORTADA
-  const coverLead = allGeneral[0] || null;
-  const coverSecond = allGeneral[1] || null;
-  const coverSidebar1 = allGeneral[2] || null;
-  const coverSidebar2 = allGeneral[3] || null;
-
-  // PÁG 2: MONTECRISTI & LA LÍNEA NOROESTE (100% Noticias Locales Reales)
-  const p2Lead = allLocal[0] || allGeneral[6] || null;
-  const p2Second = allLocal[1] || allGeneral[7] || null;
-  const p2Third = allLocal[2] || allGeneral[8] || null;
-  const p2Fourth = allLocal[3] || allGeneral[9] || null;
-
-  // PÁG 3: PANORAMA NACIONAL & POLÍTICA
-  const p3Lead = allGeneral[6] || allGeneral[0] || null;
-  const p3Second = allGeneral[7] || allGeneral[1] || null;
-  const p3Third = allGeneral[8] || allGeneral[2] || null;
-
-  // PÁG 4: ECONOMÍA, NEGOCIOS & PUERTO DE MANZANILLO
-  const p4Lead = allGeneral[9] || allGeneral[3] || null;
-  const p4Second = allGeneral[10] || allGeneral[4] || null;
-  const p4Third = allGeneral[11] || allGeneral[5] || null;
-
-  // PÁG 5: OPINIÓN, EDITORIAL & TRIBUNA
-  const p5Lead = allGeneral[12] || allGeneral[6] || null;
-  const p5Second = allGeneral[13] || allGeneral[7] || null;
-  const p5Third = allGeneral[14] || allGeneral[8] || null;
-
-  // PÁG 6: SOCIEDAD, MEDIO AMBIENTE & COMUNIDAD
-  const p6Lead = allGeneral[15] || allGeneral[9] || null;
-  const p6Second = allGeneral[16] || allGeneral[10] || null;
-  const p6Third = allGeneral[17] || allGeneral[11] || null;
-
-  // PÁG 7: CULTURA, TURISMO & HISTORIA
-  const p7Lead = allGeneral[18] || allGeneral[12] || null;
-  const p7Second = allGeneral[19] || allGeneral[13] || null;
-  const p7Third = allGeneral[20] || allGeneral[14] || null;
-
-  // PÁG 8: DEPORTES & CONTRAPORTADA
-  const p8Lead = allGeneral[21] || allGeneral[15] || null;
-  const p8Second = allGeneral[22] || allGeneral[16] || null;
-  const p8Third = allGeneral[23] || allGeneral[17] || null;
-
-  const handlePrint = () => {
-    window.print();
-  };
+  // Al imprimir, cada plana debe caber en UNA hoja tabloide (11×17"). Medimos cada plana
+  // al ancho de la hoja y la escalamos lo justo (nunca la agrandamos).
+  useEffect(() => {
+    const PRINT_WIDTH = 979; // 10.2" útiles a 96 ppp
+    const PRINT_HEIGHT = 1530; // 16.2" útiles, con margen de seguridad
+    const fit = () => {
+      document.querySelectorAll<HTMLElement>('.print-plana').forEach((el) => {
+        const wasHidden = el.classList.contains('hidden');
+        const prev = { width: el.style.width, maxWidth: el.style.maxWidth, zoom: el.style.zoom, padding: el.style.padding, border: el.style.border };
+        el.classList.remove('hidden');
+        // Igual que en la hoja: sin el relleno ni el borde de pantalla.
+        Object.assign(el.style, { width: `${PRINT_WIDTH}px`, maxWidth: 'none', zoom: '1', padding: '0', border: '0' });
+        const scale = Math.min(1, PRINT_HEIGHT / el.offsetHeight);
+        Object.assign(el.style, prev);
+        if (wasHidden) el.classList.add('hidden');
+        el.style.setProperty('--print-zoom', scale.toFixed(3));
+      });
+    };
+    window.addEventListener('beforeprint', fit);
+    return () => window.removeEventListener('beforeprint', fit);
+  }, []);
 
   const handleShare = () => {
     if (navigator.clipboard) {
@@ -151,510 +263,227 @@ export function PrintEditionReader({
     }
   };
 
-  const pageNames = [
-    'Pág. 1 Portada',
-    'Pág. 2 Montecristi',
-    'Pág. 3 Nacional',
-    'Pág. 4 Economía',
-    'Pág. 5 Opinión',
-    'Pág. 6 Sociedad',
-    'Pág. 7 Cultura',
-    'Pág. 8 Deportes'
-  ];
+  const pageNames = ['Portada', ...planas.map((p) => p.section.charAt(0) + p.section.slice(1).toLowerCase())];
+  const [lead, ...briefs] = cover;
 
   return (
-    <div className="bg-[#090d16] text-[#111111] min-h-screen py-6 sm:py-10 px-2 sm:px-4 font-sans selection:bg-[#BF1B23] selection:text-white">
-
-      {/* ── BARRA DE CONTROL DEL KIOSKO (NO SE IMPRIME) ────────────────── */}
-      <header className="max-w-6xl mx-auto mb-6 bg-[#18181b] text-white p-3.5 sm:p-4 rounded-2xl shadow-2xl flex flex-wrap items-center justify-between gap-4 print:hidden border border-white/10">
+    <div className="min-h-screen bg-[#090d16] px-2 py-6 font-sans text-[#111111] selection:bg-[#BF1B23] selection:text-white sm:px-4 sm:py-10 print:bg-white print:p-0">
+      {/* ── BARRA DE CONTROL (NO SE IMPRIME) ── */}
+      <header className="mx-auto mb-6 flex max-w-6xl flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#18181b] p-3.5 text-white shadow-2xl sm:p-4 print:hidden">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#BF1B23] flex items-center justify-center text-white shadow-md">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#BF1B23] text-white shadow-md">
             <Newspaper size={22} />
           </div>
           <div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#BF1B23] block">
-              EDICIÓN IMPRESA COMPLETA · 8 PÁGINAS
+            <span className="block text-[10px] font-black uppercase tracking-widest text-[#BF1B23]">
+              Edición impresa · {totalPages} {totalPages === 1 ? 'página' : 'páginas'}
             </span>
-            <h1 className="text-sm sm:text-base font-bold text-white tracking-tight">
-              Periódico Montecristi.net
-            </h1>
+            <h1 className="text-sm font-bold tracking-tight text-white sm:text-base">Periódico Montecristi.net</h1>
           </div>
         </div>
 
-        {/* Selector de Páginas de 1 a 8 */}
-        <div className="flex items-center gap-1 bg-white/10 p-1.5 rounded-xl border border-white/10 text-xs font-bold overflow-x-auto max-w-full">
+        <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-white/10 bg-white/10 p-1.5 text-xs font-bold">
           <button
-            onClick={() => { setViewAllPages(false); setCurrentPage(p => Math.max(1, p - 1)); }}
+            onClick={() => { setViewAllPages(false); setCurrentPage((p) => Math.max(1, p - 1)); }}
             disabled={currentPage === 1 && !viewAllPages}
             aria-label="Página anterior"
-            className="p-1.5 rounded-lg hover:bg-white/15 disabled:opacity-30 transition-all cursor-pointer text-white shrink-0"
+            className="shrink-0 cursor-pointer rounded-lg p-1.5 text-white transition-all hover:bg-white/15 disabled:opacity-30"
           >
             <ChevronLeft size={16} />
           </button>
-
-          {pageNames.map((name, i) => {
-            const pageNum = i + 1;
-            return (
-              <button
-                key={pageNum}
-                onClick={() => { setViewAllPages(false); setCurrentPage(pageNum); }}
-                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer shrink-0 text-[11px] ${
-                  currentPage === pageNum && !viewAllPages
-                    ? 'bg-[#BF1B23] text-white font-black shadow-sm'
-                    : 'hover:bg-white/10 text-gray-300'
-                }`}
-              >
-                {name}
-              </button>
-            );
-          })}
-
+          {pageNames.map((name, i) => (
+            <button
+              key={name + i}
+              onClick={() => { setViewAllPages(false); setCurrentPage(i + 1); }}
+              className={`shrink-0 cursor-pointer rounded-lg px-2.5 py-1 text-[11px] transition-all ${
+                currentPage === i + 1 && !viewAllPages ? 'bg-[#BF1B23] font-black text-white shadow-sm' : 'text-gray-300 hover:bg-white/10'
+              }`}
+            >
+              {i + 1}. {name}
+            </button>
+          ))}
           <button
-            onClick={() => setViewAllPages(v => !v)}
-            className={`px-3 py-1 rounded-lg transition-all cursor-pointer shrink-0 flex items-center gap-1 ${
-              viewAllPages ? 'bg-amber-600 text-white font-black shadow-sm' : 'hover:bg-white/10 text-gray-300'
+            onClick={() => setViewAllPages((v) => !v)}
+            className={`flex shrink-0 cursor-pointer items-center gap-1 rounded-lg px-3 py-1 transition-all ${
+              viewAllPages ? 'bg-amber-600 font-black text-white shadow-sm' : 'text-gray-300 hover:bg-white/10'
             }`}
-            title="Ver todas las 8 planas continuas"
           >
             <Eye size={13} />
-            {viewAllPages ? '1 Plana' : 'Ver 8 Planas'}
+            {viewAllPages ? 'Una plana' : 'Ver todas'}
           </button>
-
           <button
-            onClick={() => { setViewAllPages(false); setCurrentPage(p => Math.min(totalPages, p + 1)); }}
+            onClick={() => { setViewAllPages(false); setCurrentPage((p) => Math.min(totalPages, p + 1)); }}
             disabled={currentPage === totalPages && !viewAllPages}
             aria-label="Página siguiente"
-            className="p-1.5 rounded-lg hover:bg-white/15 disabled:opacity-30 transition-all cursor-pointer text-white shrink-0"
+            className="shrink-0 cursor-pointer rounded-lg p-1.5 text-white transition-all hover:bg-white/15 disabled:opacity-30"
           >
             <ChevronRight size={16} />
           </button>
         </div>
 
-        {/* Botones de Acción */}
         <div className="flex items-center gap-2">
-          <div className="hidden xl:flex items-center gap-1 bg-white/10 p-1 rounded-xl">
-            <button
-              onClick={() => setZoomLevel(z => Math.max(75, z - 10))}
-              aria-label="Reducir zoom"
-              className="p-1.5 hover:bg-white/15 rounded-lg text-gray-300 hover:text-white transition-all cursor-pointer"
-            >
+          <div className="hidden items-center gap-1 rounded-xl bg-white/10 p-1 xl:flex">
+            <button onClick={() => setZoomLevel((z) => Math.max(70, z - 10))} aria-label="Reducir zoom" className="cursor-pointer rounded-lg p-1.5 text-gray-300 transition-all hover:bg-white/15 hover:text-white">
               <ZoomOut size={16} />
             </button>
-            <span className="text-[11px] font-mono px-1 text-gray-300">{zoomLevel}%</span>
-            <button
-              onClick={() => setZoomLevel(z => Math.min(125, z + 10))}
-              aria-label="Aumentar zoom"
-              className="p-1.5 hover:bg-white/15 rounded-lg text-gray-300 hover:text-white transition-all cursor-pointer"
-            >
+            <span className="px-1 font-mono text-[11px] text-gray-300">{zoomLevel}%</span>
+            <button onClick={() => setZoomLevel((z) => Math.min(130, z + 10))} aria-label="Aumentar zoom" className="cursor-pointer rounded-lg p-1.5 text-gray-300 transition-all hover:bg-white/15 hover:text-white">
               <ZoomIn size={16} />
             </button>
           </div>
-
-          <button
-            onClick={handleShare}
-            aria-label="Compartir edición"
-            className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-white transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold"
-          >
+          <button onClick={handleShare} aria-label="Compartir edición" className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-white/10 p-2.5 text-xs font-bold text-white transition-all hover:bg-white/20">
             {copied ? <Check size={16} className="text-emerald-400" /> : <Share2 size={16} />}
             <span className="hidden sm:inline">{copied ? 'Copiado' : 'Compartir'}</span>
           </button>
-
           <button
-            onClick={handlePrint}
-            aria-label="Imprimir periódico completo de 8 páginas o guardar en PDF"
-            className="flex items-center gap-2 bg-[#BF1B23] hover:bg-[#8A1017] active:scale-95 text-white px-4 py-2.5 rounded-xl transition-all text-xs font-black uppercase tracking-wider shadow-lg cursor-pointer"
+            onClick={() => window.print()}
+            aria-label="Imprimir la edición completa o guardar en PDF"
+            className="flex cursor-pointer items-center gap-2 rounded-xl bg-[#BF1B23] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-lg transition-all hover:bg-[#8A1017] active:scale-95"
           >
             <Printer size={16} />
-            <span>Imprimir 8 Páginas / PDF</span>
+            <span>Imprimir / PDF</span>
           </button>
         </div>
       </header>
 
-      {/* ── CONTENEDOR DE LAS 8 PLANAS IMPRESAS ───────────────────────────── */}
-      <div className="flex flex-col items-center gap-10 overflow-x-auto pb-16 select-text">
-
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* PÁGINA 1: PORTADA PRINCIPAL (DISEÑO BROADSHEET INTERNACIONAL)        */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {(viewAllPages || currentPage === 1) && (
+      <div className="flex select-text flex-col items-center gap-10 pb-16 print:block print:gap-0 print:pb-0">
+        {/* ═══════════════════ PÁGINA 1 · PORTADA ═══════════════════ */}
+        {lead && (
           <article
-            style={{ transform: viewAllPages ? 'none' : `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}
-            className="bg-[#ffffff] text-[#111111] w-full max-w-[960px] min-h-[1420px] p-6 sm:p-8 shadow-[0_30px_90px_rgba(0,0,0,0.6)] border border-gray-300 flex flex-col justify-between print:shadow-none print:border-none print:p-0 print:m-0 print:w-full print:max-w-none print:transform-none print:min-h-screen print:break-after-page print:page-break-after-always"
+            style={pageStyle}
+            className={`${PAGE_CLASS} print-plana ${isVisible(1) ? '' : 'hidden print:block'}`}
           >
-            <div className="space-y-3">
-              {/* Encabezado superior */}
-              <div className="flex items-center justify-between text-[11px] font-black text-gray-900 uppercase tracking-tight border-b-2 border-black pb-1">
-                <span>{dateStr.toUpperCase()} · No. {editionNumber}</span>
-                <span>MONTECRISTI / REPÚBLICA DOMINICANA · EDICIÓN NACIONAL COMPLETA</span>
-                <span>WWW.MONTECRISTI.NET</span>
-              </div>
-
-              {/* Cabecera / Masthead de Periódico */}
-              <div className="border-b-2 border-black pb-3">
-                <div className="bg-[#042564] text-white p-4 sm:p-5 flex items-center justify-between rounded-xs shadow-xs">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-white p-2 rounded-sm shrink-0">
-                      <Image src="/logo.svg" alt="Montecristi.net" width={48} height={48} className="h-10 w-10 sm:h-12 sm:w-12 object-contain" />
-                    </div>
-                    <div>
-                      <h2 className="font-[family-name:var(--font-source-sans)] font-black text-3xl sm:text-5xl lg:text-[52px] uppercase tracking-tighter leading-none">
-                        MONTECRISTI<span className="text-[#BF1B23]">.NET</span>
-                      </h2>
-                      <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.3em] text-gray-200 block mt-1">
-                        EL DIARIO DE SAN FERNANDO DE MONTECRISTI Y LA LÍNEA NOROESTE
-                      </span>
-                    </div>
-                  </div>
-                  <div className="hidden md:flex flex-col text-right text-[10px] font-bold text-gray-300 border-l border-white/20 pl-4">
-                    <span>EDICIÓN DIARIA MATUTINA</span>
-                    <span className="text-white font-black">FUNDADO EN 2019</span>
-                    <span>COBERTURA VERAZ & PLURAL</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* ── CUERPO PRINCIPAL DE PORTADA: GRAN NOTICIA + COLUMNA LATERAL ── */}
-              <div className="grid grid-cols-12 gap-6 pt-1">
-                
-                {/* Columna Izquierda: Gran Noticia Principal del Día */}
-                <div className="col-span-12 lg:col-span-8 space-y-4 pr-0 lg:pr-4 lg:border-r lg:border-gray-200">
-                  {coverLead && (
-                    <div className="space-y-3 border-b-2 border-black pb-4">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-[#BF1B23] bg-red-50 px-2.5 py-0.5 border border-red-200">
-                        {getCategoryNames(coverLead)[0] || 'GRAN TITULAR DEL DÍA'}
-                      </span>
-                      
-                      <h2 className="text-3xl sm:text-4xl lg:text-[44px] font-black font-serif text-gray-950 leading-[1.06] tracking-tight">
-                        {cleanTitle(coverLead.title.rendered)}
-                      </h2>
-
-                      <div className="flex items-center gap-3 text-[11px] font-bold text-gray-600 border-y border-gray-100 py-1 font-sans">
-                        <span className="text-[#BF1B23] uppercase">Por Redacción Montecristi</span>
-                        <span>·</span>
-                        <span>Santo Domingo / San Fernando</span>
-                      </div>
-
-                      {/* Foto Principal de Portada */}
-                      <div className="relative aspect-[16/9] w-full bg-gray-100 border border-gray-300 overflow-hidden shadow-xs">
-                        <Image
-                          src={getFeaturedImage(coverLead) || siteConfig.seo.defaultImage} unoptimized={!isLocalImage(getFeaturedImage(coverLead))}
-                          alt="Foto Noticia Portada"
-                          fill
-                          priority
-                          className="object-cover"
-                        />
-                      </div>
-
-                      {/* Texto Completo a Doble Columna con Capitular */}
-                      <div className="columns-1 sm:columns-2 gap-5 text-justify font-serif text-[12.5px] text-gray-900 leading-[1.65] pt-1">
-                        {getPrintParagraphs(coverLead.content?.rendered || coverLead.excerpt?.rendered || '').map((para, idx) => (
-                          <p key={idx} className={`mb-3 ${idx === 0 ? 'first-letter:text-4xl first-letter:font-black first-letter:font-serif first-letter:float-left first-letter:mr-2.5 first-letter:leading-none first-letter:text-[#BF1B23]' : ''}`}>
-                            {para}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Segunda Noticia de Portada */}
-                  {coverSecond && (
-                    <div className="space-y-2 pt-1">
-                      <span className="text-[9px] font-black uppercase tracking-wider text-[#042564]">
-                        SEGUNDO ENFOQUE · {getCategoryNames(coverSecond)[0] || 'ACTUALIDAD'}
-                      </span>
-                      <h3 className="text-xl sm:text-2xl font-black font-serif text-gray-950 leading-snug">
-                        {cleanTitle(coverSecond.title.rendered)}
-                      </h3>
-                      <div className="columns-1 sm:columns-2 gap-4 text-justify font-serif text-[12px] text-gray-800 leading-relaxed pt-1">
-                        {getPrintParagraphs(coverSecond.content?.rendered || coverSecond.excerpt?.rendered || '').slice(0, 4).map((para, idx) => (
-                          <p key={idx} className="mb-2">{para}</p>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Columna Derecha: Reportes Paralelos & Anuncio */}
-                <div className="col-span-12 lg:col-span-4 space-y-4 flex flex-col justify-between">
-                  <div className="space-y-4">
-                    <div className="bg-[#BF1B23] text-white text-center py-1 px-2 text-[11px] font-black uppercase tracking-widest shadow-xs">
-                      PANORAMA REGIONAL
-                    </div>
-
-                    {coverSidebar1 && (
-                      <div className="border-b border-gray-200 pb-3 space-y-1.5">
-                        <span className="text-[9px] font-black uppercase tracking-wider text-[#BF1B23]">
-                          {getCategoryNames(coverSidebar1)[0] || 'DESTACADO'}
-                        </span>
-                        <h4 className="text-[13.5px] font-black text-gray-950 leading-tight">
-                          {cleanTitle(coverSidebar1.title.rendered)}
-                        </h4>
-                        <div className="relative aspect-video w-full bg-gray-100 border border-gray-200 overflow-hidden my-1.5">
-                          <Image src={getFeaturedImage(coverSidebar1) || siteConfig.seo.defaultImage} unoptimized={!isLocalImage(getFeaturedImage(coverSidebar1))} alt="Foto Lateral" fill className="object-cover" />
-                        </div>
-                        <div className="text-justify font-serif text-[11.5px] text-gray-800 leading-relaxed space-y-1.5">
-                          {getPrintParagraphs(coverSidebar1.content?.rendered || coverSidebar1.excerpt?.rendered || '').slice(0, 3).map((para, idx) => (
-                            <p key={idx}>{para}</p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {coverSidebar2 && (
-                      <div className="space-y-1.5">
-                        <span className="text-[9px] font-black uppercase tracking-wider text-[#042564]">
-                          {getCategoryNames(coverSidebar2)[0] || 'INFORME'}
-                        </span>
-                        <h4 className="text-[13px] font-black text-gray-950 leading-tight">
-                          {cleanTitle(coverSidebar2.title.rendered)}
-                        </h4>
-                        <div className="text-justify font-serif text-[11.5px] text-gray-800 leading-relaxed space-y-1.5">
-                          {getPrintParagraphs(coverSidebar2.content?.rendered || coverSidebar2.excerpt?.rendered || '').slice(0, 3).map((para, idx) => (
-                            <p key={idx}>{para}</p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="border-t border-gray-300 pt-3">
-                    <span className="text-[8px] font-mono text-gray-400 uppercase tracking-widest block mb-1 text-center">ESPACIO PUBLICITARIO</span>
-                    <div className="relative aspect-[300/250] w-full overflow-hidden">
-                      <Image src="/ads/Bandera-300-x-250.jpg" alt="Publicidad Lateral" fill className="object-cover" />
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Banner Inferior */}
-              <div className="mt-4 pt-2 border-t-2 border-black">
-                <div className="relative w-full overflow-hidden">
-                  <Image src="/ads/Bandera-970-X-90.jpg" alt="Publicidad Portada" width={970} height={90} style={{ width: '100%', height: 'auto' }} className="w-full h-auto block" />
-                </div>
-              </div>
+            <div className="flex items-center justify-between border-b-2 border-black pb-1 text-[10px] font-black uppercase tracking-tight text-gray-900 sm:text-[11px]">
+              <span>{dateStr} · No. {editionNumber}</span>
+              <span className="hidden md:inline">Montecristi · República Dominicana</span>
+              <span>montecristi.net</span>
             </div>
 
-            <div className="border-t border-black pt-2 mt-3 flex items-center justify-between text-[9px] text-gray-600 font-bold uppercase tracking-wider">
-              <span>ISSN 2972-8819 · EDICIÓN DIARIA IMPRESA</span>
-              <span>SAN FERNANDO DE MONTECRISTI</span>
-              <span className="text-[#BF1B23] font-black">PÁGINA 1 · PORTADA</span>
+            {/* Cabecera */}
+            <div className="border-b-4 border-double border-black py-3 text-center">
+              <div className="flex min-w-0 items-center justify-center gap-2 sm:gap-3">
+                <Image src="/logo.svg" alt="" width={56} height={56} className="h-[clamp(28px,8vw,56px)] w-[clamp(28px,8vw,56px)] shrink-0 object-contain" />
+                <h2 className="min-w-0 font-[family-name:var(--font-source-sans)] text-[clamp(26px,8.5vw,68px)] font-black uppercase leading-none tracking-tighter text-[#042564]">
+                  Montecristi<span className="text-[#BF1B23]">.net</span>
+                </h2>
+              </div>
+              <p className="mt-1 text-[9px] font-black uppercase tracking-[0.35em] text-gray-600 sm:text-[11px]">
+                El diario de San Fernando de Montecristi y la Línea Noroeste
+              </p>
             </div>
+
+            {/* Gran noticia */}
+            <section className="border-b-2 border-black py-4">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#BF1B23]">{lead.category}</span>
+              <h3 className="mt-1 font-serif text-[30px] font-black leading-[1.05] tracking-tight text-gray-950 sm:text-[46px]">
+                {lead.title}
+              </h3>
+              {lead.deck && <p className="mt-2 font-serif text-[15px] italic leading-snug text-gray-700 sm:text-[17px]">{lead.deck}</p>}
+              <p className="mt-2 border-y border-gray-200 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-600">
+                Por <span className="text-[#BF1B23]">Redacción Montecristi</span>
+              </p>
+
+              {/* Foto a todo el ancho y texto en columnas balanceadas: terminan parejas */}
+              <figure className="mt-3">
+                <StoryImage src={lead.image} alt={lead.title} ratio="aspect-[16/9] sm:aspect-[21/9]" priority />
+              </figure>
+              <div className={`mt-3 text-justify font-serif text-[12.5px] leading-[1.6] text-gray-900 [hyphens:auto] ${FLOW_CLASS}`} lang="es">
+                <Paragraphs story={lead} dropCapColor="#BF1B23" />
+              </div>
+            </section>
+
+            {/* Breves de portada: misma extensión → tarjetas parejas */}
+            {briefs.length > 0 && (
+              <section className="grid gap-5 py-4 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-gray-200 print:grid-cols-3 print:gap-0">
+                {briefs.map((story) => (
+                  <div key={story.key} className="sm:px-4 sm:first:pl-0 sm:last:pr-0">
+                    <StoryImage src={story.image} alt={story.title} ratio="aspect-[16/10]" />
+                    <span className="mt-2 block text-[9px] font-black uppercase tracking-wider text-[#042564]">{story.category}</span>
+                    <h4 className="mt-0.5 font-serif text-[16px] font-black leading-tight text-gray-950">{story.title}</h4>
+                    <div className="mt-1.5 text-justify font-serif text-[11.5px] leading-relaxed text-gray-800 [hyphens:auto]" lang="es">
+                      <Paragraphs story={story} />
+                    </div>
+                  </div>
+                ))}
+              </section>
+            )}
+
+            <BottomBanner />
+            <PageFooter left={`Edición No. ${editionNumber}`} right="Página 1 · Portada" color="#BF1B23" />
           </article>
         )}
 
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* PÁGINAS INTERIORES 2 A 8 (NOTICIAS BIEN HECHAS Y COMPLETAS)          */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {[
-          {
-            pageNum: 2,
-            section: 'MONTECRISTI & LA LÍNEA NOROESTE',
-            sub: 'SAN FERNANDO · GUAYUBÍN · VILLA VÁSQUEZ · CASTAÑUELAS · MANZANILLO',
-            color: '#BF1B23',
-            lead: p2Lead,
-            second: p2Second,
-            third: p2Third,
-            fourth: p2Fourth,
-            adSquare: '/ads/300x250-03.jpg'
-          },
-          {
-            pageNum: 3,
-            section: 'PANORAMA NACIONAL & POLÍTICA',
-            sub: 'GOBIERNO · CONGRESO · JUSTICIA · PROVINCIAS · ESTADO',
-            color: '#042564',
-            lead: p3Lead,
-            second: p3Second,
-            third: p3Third,
-            fourth: null,
-            adSquare: '/ads/Bandera-300-x-250.jpg'
-          },
-          {
-            pageNum: 4,
-            section: 'ECONOMÍA, NEGOCIOS & PUERTO DE MANZANILLO',
-            sub: 'FINANZAS · INFRAESTRUCTURA · COMERCIO EXTERIOR · TURISMO',
-            color: '#8A1017',
-            lead: p4Lead,
-            second: p4Second,
-            third: p4Third,
-            fourth: null,
-            adSquare: '/ads/300x250-03.jpg'
-          },
-          {
-            pageNum: 5,
-            section: 'OPINIÓN, EDITORIAL & TRIBUNA',
-            sub: 'EDITORIAL INSTITUCIONAL · COLUMNAS · FIRMAS INVITADAS · ANÁLISIS',
-            color: '#042564',
-            lead: p5Lead,
-            second: p5Second,
-            third: p5Third,
-            fourth: null,
-            adSquare: '/ads/Bandera-300-x-250.jpg'
-          },
-          {
-            pageNum: 6,
-            section: 'COMUNIDAD, MEDIO AMBIENTE & SOCIEDAD',
-            sub: 'PARQUES NACIONALES · SALUD · EDUCACIÓN · MORRO DE MONTECRISTI',
-            color: '#0f766e',
-            lead: p6Lead,
-            second: p6Second,
-            third: p6Third,
-            fourth: null,
-            adSquare: '/ads/300x250-03.jpg'
-          },
-          {
-            pageNum: 7,
-            section: 'CULTURA, TRADICIÓN & ESTILO DE VIDA',
-            sub: 'CARNAVAL DE MONTECRISTI · HISTORIA · GASTRONOMÍA · TURISMO',
-            color: '#7c3aed',
-            lead: p7Lead,
-            second: p7Second,
-            third: p7Third,
-            fourth: null,
-            adSquare: '/ads/Bandera-300-x-250.jpg'
-          },
-          {
-            pageNum: 8,
-            section: 'DEPORTES & CONTRAPORTADA',
-            sub: 'BÉISBOL LIDOM · MLB GRANDES LIGAS · BALONCESTO · RESUMEN FINAL',
-            color: '#16a34a',
-            lead: p8Lead,
-            second: p8Second,
-            third: p8Third,
-            fourth: null,
-            adSquare: '/ads/300x250-03.jpg'
-          },
-        ].map((page) => {
-          if (!viewAllPages && currentPage !== page.pageNum) return null;
-          if (!page.lead) return null;
-
+        {/* ═══════════════════ PLANAS INTERIORES ═══════════════════ */}
+        {planas.map((plana) => {
+          const [main, ...rest] = plana.stories;
           return (
             <article
-              key={page.pageNum}
-              style={{ transform: viewAllPages ? 'none' : `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}
-              className="bg-[#ffffff] text-[#111111] w-full max-w-[960px] min-h-[1420px] p-6 sm:p-8 shadow-[0_30px_90px_rgba(0,0,0,0.6)] border border-gray-300 flex flex-col justify-between print:shadow-none print:border-none print:p-0 print:m-0 print:w-full print:max-w-none print:transform-none print:min-h-screen print:break-after-page print:page-break-after-always"
+              key={plana.num}
+              style={pageStyle}
+              className={`${PAGE_CLASS} print-plana ${isVisible(plana.num) ? '' : 'hidden print:block'}`}
             >
-              <div className="space-y-3">
-                {/* Cintillo Superior */}
-                <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-wider border-b-2 pb-1.5" style={{ borderColor: page.color }}>
-                  <span style={{ color: page.color }}>PÁGINA {page.pageNum} · {page.section}</span>
-                  <span>MONTECRISTI.NET · EDICIÓN IMPRESA</span>
-                  <span>{dateStr.toUpperCase()}</span>
-                </div>
-
-                {/* Cabecilla de Sección */}
-                <div className="text-white px-4 py-2 flex items-center justify-between rounded-xs" style={{ backgroundColor: page.color }}>
-                  <span className="font-black text-sm uppercase tracking-widest">{page.section}</span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-white/90 hidden sm:inline">{page.sub}</span>
-                </div>
-
-                {/* ── 1. NOTICIA PRINCIPAL DE LA PÁGINA (COMPLETA A MÚLTIPLES COLUMNAS) ── */}
-                <div className="space-y-3 pt-1 border-b-2 border-black pb-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 border inline-block" style={{ color: page.color, borderColor: page.color, backgroundColor: `${page.color}15` }}>
-                      {getCategoryNames(page.lead)[0] || 'REPORTE DESTACADO'}
-                    </span>
-                    <span className="text-[10px] font-bold text-gray-500 uppercase">
-                      Por Redacción Montecristi
-                    </span>
-                  </div>
-
-                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black font-serif text-[#111111] leading-tight">
-                    {cleanTitle(page.lead.title.rendered)}
-                  </h2>
-
-                  <div className="grid grid-cols-12 gap-5 items-start">
-                    <div className="col-span-12 md:col-span-5 space-y-1.5">
-                      <div className="relative aspect-[4/3] w-full bg-gray-100 border border-gray-300 overflow-hidden shadow-xs">
-                        <Image src={getFeaturedImage(page.lead) || siteConfig.seo.defaultImage} unoptimized={!isLocalImage(getFeaturedImage(page.lead))} alt="Foto Noticia" fill className="object-cover" />
-                      </div>
-                      <p className="text-[10.5px] text-gray-600 italic leading-snug font-serif">
-                        Cobertura informativa especial de Montecristi.net para la edición impresa.
-                      </p>
-                    </div>
-
-                    <div className="col-span-12 md:col-span-7">
-                      <div className="columns-1 sm:columns-2 gap-4 text-justify font-serif text-[12.5px] text-gray-900 leading-[1.65]">
-                        {getPrintParagraphs(page.lead.content?.rendered || page.lead.excerpt?.rendered || '').map((para, idx) => (
-                          <p key={idx} className={`mb-3 ${idx === 0 ? 'first-letter:text-4xl first-letter:font-black first-letter:font-serif first-letter:float-left first-letter:mr-2.5 first-letter:leading-none' : ''}`} style={idx === 0 ? { color: page.color } : {}}>
-                            <span className="text-gray-900">{para}</span>
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── 2. SEGUNDA Y TERCERA NOTICIAS COMPLETAS DE LA PLANA ── */}
-                <div className="pt-2 grid grid-cols-12 gap-6">
-                  {page.second && (
-                    <div className="col-span-12 md:col-span-7 space-y-2 border-r-0 md:border-r md:border-gray-200 pr-0 md:pr-4">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: page.color }}></span>
-                        <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: page.color }}>
-                          {getCategoryNames(page.second)[0] || 'SEGUNDO TEMA'}
-                        </span>
-                      </div>
-
-                      <h3 className="text-xl sm:text-2xl font-black font-serif text-[#111111] leading-snug">
-                        {cleanTitle(page.second.title.rendered)}
-                      </h3>
-
-                      <div className="relative aspect-video w-full bg-gray-100 border border-gray-300 overflow-hidden my-2">
-                        <Image src={getFeaturedImage(page.second) || siteConfig.seo.defaultImage} unoptimized={!isLocalImage(getFeaturedImage(page.second))} alt="Foto Noticia 2" fill className="object-cover" />
-                      </div>
-
-                      <div className="columns-1 sm:columns-2 gap-4 text-justify font-serif text-[12px] text-gray-800 leading-relaxed">
-                        {getPrintParagraphs(page.second.content?.rendered || page.second.excerpt?.rendered || '').map((para, idx) => (
-                          <p key={idx} className="mb-2">{para}</p>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="col-span-12 md:col-span-5 space-y-4 flex flex-col justify-between">
-                    {page.third && (
-                      <div className="space-y-2 border-b border-gray-200 pb-3">
-                        <span className="text-[9px] font-black uppercase tracking-wider" style={{ color: page.color }}>
-                          ACTUALIDAD · {getCategoryNames(page.third)[0] || 'CRÓNICA'}
-                        </span>
-                        <h4 className="text-[14px] font-black text-gray-900 leading-snug">
-                          {cleanTitle(page.third.title.rendered)}
-                        </h4>
-                        <div className="text-justify font-serif text-[11.5px] text-gray-800 leading-relaxed space-y-2">
-                          {getPrintParagraphs(page.third.content?.rendered || page.third.excerpt?.rendered || '').slice(0, 4).map((para, idx) => (
-                            <p key={idx}>{para}</p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="pt-2">
-                      <span className="text-[8px] font-mono text-gray-400 uppercase tracking-widest block mb-1 text-center">ESPACIO PUBLICITARIO</span>
-                      <div className="relative aspect-[300/250] w-full border border-gray-300 overflow-hidden shadow-xs">
-                        <Image src={page.adSquare} alt="Publicidad Interior" fill className="object-cover" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Banner Inferior */}
-                <div className="mt-3 pt-2 border-t-2 border-black">
-                  <div className="relative w-full overflow-hidden border border-gray-300 shadow-xs">
-                    <Image src="/ads/Bandera-970-X-90.jpg" alt="Publicidad Plana" width={970} height={90} style={{ width: '100%', height: 'auto' }} className="w-full h-auto block" />
-                  </div>
-                </div>
+              <div className="flex items-center justify-between border-b-2 pb-1.5 text-[10px] font-black uppercase tracking-wider sm:text-[11px]" style={{ borderColor: plana.color }}>
+                <span style={{ color: plana.color }}>Página {plana.num}</span>
+                <span className="hidden md:inline">Montecristi.net · Edición impresa</span>
+                <span>{dateStr}</span>
               </div>
 
-              <div className="border-t border-black pt-2 mt-3 flex items-center justify-between text-[9px] text-gray-600 font-bold uppercase tracking-wider">
-                <span>MONTECRISTI.NET · PERIÓDICO IMPRESO</span>
-                <span>SANTO DOMINGO / MONTECRISTI</span>
-                <span className="font-black" style={{ color: page.color }}>PÁGINA {page.pageNum} · {page.section}</span>
+              <div className="mt-2 px-4 py-2 text-white" style={{ backgroundColor: plana.color }}>
+                <span className="text-sm font-black uppercase tracking-widest">{plana.section}</span>
               </div>
+
+              {/* Noticia principal: foto dentro del flujo de columnas, sin huecos */}
+              <section className="border-b-2 border-black py-4">
+                <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: plana.color }}>{main.category}</span>
+                <h3 className="mt-1 font-serif text-[26px] font-black leading-[1.08] text-gray-950 sm:text-[38px]">{main.title}</h3>
+                {main.deck && <p className="mt-2 font-serif text-[14px] italic leading-snug text-gray-700 sm:text-[16px]">{main.deck}</p>}
+                <figure className="mt-3">
+                  <StoryImage src={main.image} alt={main.title} ratio="aspect-[16/9] sm:aspect-[21/9]" />
+                </figure>
+                <div className={`mt-3 text-justify font-serif text-[12.5px] leading-[1.6] text-gray-900 [hyphens:auto] ${FLOW_CLASS}`} lang="es">
+                  <Paragraphs story={main} dropCapColor={plana.color} />
+                </div>
+              </section>
+
+              {/* Resto de notas y anuncio en un único flujo balanceado */}
+              {rest.length > 0 && (
+                <section className={`py-4 text-justify font-serif text-[11.5px] leading-relaxed text-gray-800 [hyphens:auto] ${FLOW_CLASS}`} lang="es">
+                  {rest.map((story, i) => (
+                    <React.Fragment key={story.key}>
+                      <div className="mb-4 border-b border-gray-200 pb-3">
+                        <span className="block break-after-avoid font-sans text-[9px] font-black uppercase tracking-wider" style={{ color: plana.color }}>
+                          {story.category}
+                        </span>
+                        <h4 className="mb-1.5 break-after-avoid text-left font-serif text-[17px] font-black leading-tight text-gray-950">{story.title}</h4>
+                        {i === 0 && (
+                          <figure className="mb-2 break-inside-avoid">
+                            <StoryImage src={story.image} alt={story.title} ratio="aspect-[16/10]" />
+                          </figure>
+                        )}
+                        <Paragraphs story={story} />
+                      </div>
+                      {i === 1 && (
+                        <aside className="mb-4 break-inside-avoid">
+                          <span className="mb-1 block text-center font-mono text-[8px] uppercase tracking-widest text-gray-400">Espacio publicitario</span>
+                          <Image src={plana.ad} alt="Publicidad" width={300} height={250} className="mx-auto block h-auto w-full max-w-[300px] border border-gray-300" />
+                        </aside>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </section>
+              )}
+
+              <BottomBanner />
+              <PageFooter left={`Edición No. ${editionNumber}`} right={`Página ${plana.num} · ${plana.section}`} color={plana.color} />
             </article>
           );
         })}
 
+        {!lead && (
+          <p className="rounded-xl bg-white/10 px-6 py-10 text-center text-sm font-bold text-white print:hidden">
+            La edición de hoy se está preparando. Vuelve en unos minutos.
+          </p>
+        )}
       </div>
     </div>
   );
