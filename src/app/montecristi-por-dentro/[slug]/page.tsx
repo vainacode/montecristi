@@ -5,6 +5,7 @@ import Image from "next/image";
 import { ArrowLeft, ExternalLink, MapPin, Play, ShieldCheck } from "lucide-react";
 import { siteConfig } from "@/config/site";
 import { montecristiGuides, montecristiGuideDetails } from "@/data/montecristiPorDentro";
+import { serializeJsonLd } from "@/lib/json-ld";
 
 export const revalidate = 3600;
 
@@ -66,7 +67,7 @@ export default async function MontecristiGuidePage({ params }: GuidePageProps) {
 
   return (
     <article className="min-h-screen bg-[#f7f6f3]">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(guideJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(guideJsonLd) }} />
       <div className="bg-[#031934] text-white">
         <div className="mx-auto grid max-w-7xl gap-10 px-5 pb-16 pt-12 md:grid-cols-[1.15fr_0.85fr] md:items-end md:px-8 md:pt-20">
           <div>

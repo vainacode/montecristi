@@ -11,6 +11,7 @@ import { NewsReaderProvider } from "@/context/NewsReaderContext";
 import { AudioPlayerBar } from "@/components/AudioNewsReader";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
+import { serializeJsonLd } from "@/lib/json-ld";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -153,9 +154,9 @@ export default async function RootLayout({
         "url": siteConfig.url,
         "logo": {
           "@type": "ImageObject",
-          "url": `${siteConfig.url}/logo.svg`,
-          "width": "420",
-          "height": "80"
+          "url": `${siteConfig.url}/icon-512.png`,
+          "width": 512,
+          "height": 512
         },
         "description": siteConfig.description,
         "foundingDate": siteConfig.founded,
@@ -214,7 +215,7 @@ export default async function RootLayout({
         {/* Schema.org NewsMediaOrganization & WebSite */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(newsMediaJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(newsMediaJsonLd) }}
         />
         {/* Facebook App ID */}
         {siteConfig.seo.facebookAppId && (

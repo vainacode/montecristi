@@ -8,14 +8,15 @@ import { MostRead } from "@/components/MostRead";
 import { CustomAd } from "@/components/CustomAd";
 import { ListenButton } from "@/components/AudioNewsReader";
 import { ViewTracker } from "@/components/ViewTracker";
+import { ApiFallbackScreen } from "@/components/ApiFallbackScreen";
 import { siteConfig } from "@/config/site";
 import { adsConfig } from "@/config/ads";
 import Image from "next/image";
 import Link from "next/link";
 import { Calendar, Send } from "lucide-react";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { Metadata } from 'next';
-import { ApiFallbackScreen } from "@/components/ApiFallbackScreen";
+import { serializeJsonLd } from "@/lib/json-ld";
 
 // ISR: cada artículo se genera en la primera visita y queda en caché; se renueva en
 // segundo plano según `revalidate`. Sin esto la ruta se renderizaba en cada visita.
@@ -33,7 +34,8 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   if (lookup && !lookup.post) notFound();
 
   const post = lookup?.post;
-  if (!post) return { robots: { index: false, follow: false } };
+  // Fuente caída: metadatos mínimos (sin noindex). La página lanza el error y muestra error.tsx.
+  if (!post) return { title: siteConfig.name };
 
   const rm = post.rank_math_head_json;
   const yoast = post.yoast_head_json;
@@ -458,12 +460,20 @@ function formatContent(content: string, currentCategory = 'noticias') {
   return processed + watermark;
 }
 
-export default async function ArticlePage({ params }: ArticlePageProps) {
-  const { slug } = await params;
-  return <ArticleContent slug={slug} />;
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value).toLowerCase();
+  } catch {
+    return value.toLowerCase();
+  }
 }
 
-async function ArticleContent({ slug }: { slug: string }) {
+export default async function ArticlePage({ params }: ArticlePageProps) {
+  const { category, slug } = await params;
+  return <ArticleContent category={category} slug={slug} />;
+}
+
+async function ArticleContent({ category, slug }: { category: string; slug: string }) {
   // Ejecutamos las peticiones en paralelo para no bloquear secuencialmente
   const lookup = await lookupPostBySlug(slug);
 
@@ -471,13 +481,21 @@ async function ArticleContent({ slug }: { slug: string }) {
   // que Google indexaría como "soft 404").
   if (lookup && !lookup.post) notFound();
 
+  // La fuente no respondió y no hay copia previa del artículo: pantalla de aviso con
+  // reintento. (Si el artículo ya se había leído, la caché de datos de fetch entrega la
+  // última respuesta buena mientras la fuente está caída, así que esto no lo reemplaza.)
   const post = lookup?.post;
   if (!post) {
     return (
-      <ApiFallbackScreen 
-        message="No se ha podido encontrar o sincronizar el artículo solicitado. Es posible que haya sido reubicado o que la conexión esté temporalmente interrumpida." 
-      />
+      <ApiFallbackScreen message="No se ha podido sincronizar el artículo en este momento. Pulsa reintentar en unos segundos." />
     );
+  }
+
+  // Una sola URL por artículo: si llegan por otra categoría (enlaces viejos o internos
+  // del contenido), redirigimos con 301 a la canónica.
+  const canonicalCategory = getCategorySlug(post);
+  if (safeDecode(category) !== safeDecode(canonicalCategory)) {
+    permanentRedirect(`/${canonicalCategory}/${post.slug}`);
   }
 
   const categoryId = post.categories?.[0];
@@ -556,12 +574,7 @@ async function ArticleContent({ slug }: { slug: string }) {
         }),
         "headline": cleanHeadline,
         "description": cleanExcerpt,
-        "image": imageUrl ? [
-          imageUrl,
-          `${imageUrl}#16x9`,
-          `${imageUrl}#4x3`,
-          `${imageUrl}#1x1`
-        ] : [siteDefault],
+        "image": [imageUrl || siteDefault],
         "datePublished": new Date(post.date).toISOString(),
         "dateModified": new Date(post.modified ?? post.date).toISOString(),
         "inLanguage": "es-DO",
@@ -569,20 +582,21 @@ async function ArticleContent({ slug }: { slug: string }) {
         "articleSection": categories[0] || "Noticias",
         "keywords": postTags.map((t) => t.name).join(", "),
         "author": {
-          "@type": "Person",
+          "@type": "Organization",
           "name": "Redacción Montecristi",
-          "url": `${siteConfig.url}/conocenos`,
-          "jobTitle": "Equipo Editorial"
+          "url": `${siteConfig.url}/conocenos`
         },
         "publisher": {
           "@type": "NewsMediaOrganization",
+          "@id": `${siteConfig.url}/#organization`,
           "name": siteConfig.name,
           "url": siteConfig.url,
+          // Google exige un logo raster (PNG/JPG) en los datos estructurados de noticias.
           "logo": {
             "@type": "ImageObject",
-            "url": `${siteConfig.url}/logo.svg`,
-            "width": "420",
-            "height": "80"
+            "url": `${siteConfig.url}/icon-512.png`,
+            "width": 512,
+            "height": 512
           },
           "publishingPrinciples": `${siteConfig.url}/aviso-legal`
         },
@@ -627,7 +641,7 @@ async function ArticleContent({ slug }: { slug: string }) {
     <article className="bg-white min-h-screen pb-20">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <ViewTracker postId={post.id} />
       {/* 1. ARTICLE HEADER */}

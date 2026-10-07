@@ -13,7 +13,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from 'react';
-import HomeLoading from './loading';
+import { FullPageSkeleton as HomeLoading } from '@/components/FullPageSkeleton';
 import { ApiFallbackScreen } from "@/components/ApiFallbackScreen";
 
 export const metadata: Metadata = {

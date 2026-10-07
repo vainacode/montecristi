@@ -1,4 +1,5 @@
-import { getPosts, getMontecristiPosts, getCategories } from "@/lib/wp";
+import { getPosts, getMontecristiPosts, getCategories, toPlainText } from "@/lib/wp";
+import type { WPCategory } from "@/lib/wp";
 import { getMostReadPosts } from "@/lib/analytics";
 import { NewsCard } from "@/components/NewsCard";
 import { CustomAd } from "@/components/CustomAd";
@@ -7,11 +8,13 @@ import { MostRead } from "@/components/MostRead";
 import { siteConfig } from "@/config/site";
 import Image from "next/image";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { ArrowRight, BookOpen, MapPin } from "lucide-react";
 import type { Metadata } from "next";
 import type { WPPost } from "@/lib/wp";
 import { montecristiGuides, montecristiGuideKeywords } from "@/data/montecristiPorDentro";
 import { ApiFallbackScreen } from "@/components/ApiFallbackScreen";
+import { serializeJsonLd } from "@/lib/json-ld";
 
 export const revalidate = 60;
 
@@ -37,6 +40,18 @@ const defaultConfig: CategoryConfig = {
   gradient: "from-brand-dark to-[#140405]",
   accent: "#BF1B23",
 };
+
+/**
+ * Una categoría inexistente debe dar 404 (no una página vacía con 200, que Google
+ * marca como "soft 404"). Las secciones del menú y de la configuración siempre son
+ * válidas; si la API de categorías no respondió (lista vacía) no se puede saber.
+ */
+function isUnknownCategory(slug: string, categories: WPCategory[]): boolean {
+  if (categories.length === 0 || slug === "montecristi") return false;
+  if (slug in siteConfig.categoryConfig) return false;
+  if (siteConfig.nav.some((item) => item.href === `/${slug}`)) return false;
+  return !categories.some((c) => c.slug === slug);
+}
 
 function getCategoryConfig(slug: string): CategoryConfig {
   const configs: Record<string, CategoryConfig> = siteConfig.categoryConfig;
@@ -69,11 +84,13 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
   }
 
   const categories = await getCategories().catch(() => []);
+  if (isUnknownCategory(slug, categories)) notFound();
   const category = categories.find((c) => c.slug === slug);
   const cfg = getCategoryConfig(slug);
 
-  const catName = category?.name || slug.charAt(0).toUpperCase() + slug.slice(1);
-  const seoTitle = `▷ Noticias de ${catName} hoy | Último Minuto | Montecristi`;
+  const catName = toPlainText(category?.name) || slug.charAt(0).toUpperCase() + slug.slice(1);
+  // La plantilla del layout agrega " | Montecristi.net".
+  const seoTitle = `Noticias de ${catName} hoy`;
   const seoDesc = `Últimas noticias de ${catName} en Montecristi y la República Dominicana. ${cfg.description} Información actualizada al instante.`;
 
   // og:image siempre con URL absoluta para que Google y Facebook puedan crawlearla
@@ -171,7 +188,7 @@ function MontecristiPorDentroPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f6f3]">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(pageJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(pageJsonLd) }} />
       <section className="relative overflow-hidden bg-[#031934] text-white">
         <div className="absolute inset-0 bg-[url('/morroMontecristi.jpg')] bg-cover bg-center opacity-20" />
         <div className="relative mx-auto max-w-7xl px-5 pb-16 pt-12 md:px-8 md:pb-24 md:pt-20">
@@ -209,9 +226,11 @@ async function CategoryContent({ slug }: { slug: string }) {
     getPosts({ per_page: 24 }).catch(() => []),
   ]);
 
+  if (isUnknownCategory(slug, categories)) notFound();
+
   const cfg = getCategoryConfig(slug);
   const category = categories.find((c) => c.slug === slug);
-  const categoryName = category?.name || slug.charAt(0).toUpperCase() + slug.slice(1);
+  const categoryName = toPlainText(category?.name) || slug.charAt(0).toUpperCase() + slug.slice(1);
 
   // Solo traemos artículos de esa categoría. Si es Montecristi, usamos la fuente dedicada.
   let categoryPosts: WPPost[] = [];
@@ -270,7 +289,7 @@ async function CategoryContent({ slug }: { slug: string }) {
     <div className="bg-zinc-50 min-h-screen">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(categoryJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(categoryJsonLd) }}
       />
       <GenericHero name={categoryName} cfg={cfg} />
 
