@@ -1,4 +1,4 @@
-import { getCategories, getPosts, getCategorySlug, WPPost } from "@/lib/wp";
+import { getPosts, getCategorySlug, WPPost } from "@/lib/wp";
 import { siteConfig } from "@/config/site";
 import Link from "next/link";
 import Image from "next/image";
@@ -27,10 +27,7 @@ export const metadata = {
 };
 
 export default async function SitemapPage() {
-  const [categories, recentPosts] = await Promise.all([
-    getCategories().catch(() => []),
-    getPosts({ per_page: 16 }).catch(() => [])
-  ]);
+  const recentPosts = await getPosts({ per_page: 16 }).catch(() => []);
 
   const mainSections = [
     { name: "Portada Principal", href: "/", icon: Newspaper, desc: "Noticias de última hora y actualidad nacional" },

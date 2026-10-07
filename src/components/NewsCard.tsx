@@ -26,7 +26,6 @@ interface NewsCardProps {
   hideAuthor?: boolean;
   forcedNoImage?: boolean;
   priority?: boolean;
-  showCintillo?: boolean;
 }
 
 export function NewsCard({
@@ -35,7 +34,6 @@ export function NewsCard({
   showImage = true,
   forcedNoImage = false,
   priority = false,
-  showCintillo = false,
 }: NewsCardProps) {
   const imageUrl = forcedNoImage ? "" : getFeaturedImage(post);
   const categories = getCategoryNames(post);

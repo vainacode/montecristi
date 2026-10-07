@@ -25,14 +25,15 @@ export function sanitizeInput(input: string): string {
 /**
  * Sanitizes an object of inputs (e.g. from req.json() or searchParams)
  */
-export function sanitizeObject<T extends Record<string, any>>(obj: T): T {
-  const sanitized = { ...obj };
+export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
+  const sanitized: Record<string, unknown> = { ...obj };
   for (const key in sanitized) {
-    if (typeof sanitized[key] === "string") {
-      sanitized[key] = sanitizeInput(sanitized[key]) as any;
+    const value = sanitized[key];
+    if (typeof value === "string") {
+      sanitized[key] = sanitizeInput(value);
     }
   }
-  return sanitized;
+  return sanitized as T;
 }
 
 /**

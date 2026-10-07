@@ -2,7 +2,8 @@
 
 import { Send, Loader2 } from 'lucide-react';
 import { Turnstile } from '@marsidev/react-turnstile';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
+import Link from 'next/link';
 import { submitContactForm } from '@/actions/contact';
 
 export function ContactForm() {
@@ -126,7 +127,7 @@ export function ContactForm() {
             </>
           )}
         </button>
-        <p className="text-[10px] text-gray-400 font-inter text-center mt-4">Tus datos están protegidos por nuestra <a href="/politica-de-privacidad" className="underline hover:text-gray-600">Política de Privacidad</a> y protegidos por Cloudflare Turnstile.</p>
+        <p className="text-[10px] text-gray-400 font-inter text-center mt-4">Tus datos están protegidos por nuestra <Link href="/politica-de-privacidad" className="underline hover:text-gray-600">Política de Privacidad</Link> y protegidos por Cloudflare Turnstile.</p>
       </form>
     </div>
   );

@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export const metadata: Metadata = {
-  title: 'Página en Construcción | 404',
-  description: 'Esta página se encuentra en construcción.',
+  title: 'Página no encontrada | 404',
+  description: 'La página que buscas no existe o fue movida. Vuelve a la portada para leer las últimas noticias de Montecristi.',
   robots: { index: false, follow: false },
 };
 
@@ -162,7 +163,7 @@ export default function NotFound() {
           </div>
 
           <div className="home__img">
-            <img src="https://i.ibb.co/J3ScNtK/roshi.png" alt="Página en construcción" />
+            <Image src="https://i.ibb.co/J3ScNtK/roshi.png" alt="Página no encontrada" width={380} height={380} sizes="(min-width: 768px) 380px, 230px" />
             <div className="home__shadow" />
           </div>
         </div>

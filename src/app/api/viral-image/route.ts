@@ -5,25 +5,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
-import { readFileSync, existsSync } from "fs";
-import { join } from "path";
 import { isSafeUrl } from "@/lib/security";
 import { resolveMediaPath } from "@/lib/media";
 import { renderHeadlineVector, renderBadgeVector, renderCintilloVector } from "@/lib/vector-text";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const LOGO_SVG = join(process.cwd(), "public", "logo.svg");
-
-let cachedIconSvg = "";
-try {
-  if (existsSync(LOGO_SVG)) {
-    const raw = readFileSync(LOGO_SVG, "utf8");
-    const match = raw.match(/<g id="icono">([\s\S]*?)<\/g>/);
-    if (match) cachedIconSvg = match[1];
-  }
-} catch {}
 
 async function fetchImageBuffer(rawUrl: string): Promise<Buffer | null> {
   const url = rawUrl ? resolveMediaPath(rawUrl) : rawUrl;
@@ -47,10 +34,7 @@ export async function GET(req: NextRequest) {
   const style = req.nextUrl.searchParams.get("style") || (url2 ? "split" : "single");
   const headline = (req.nextUrl.searchParams.get("headline") || "").trim().toUpperCase();
   const headlinePos = (req.nextUrl.searchParams.get("headlinePos") || "bottom").toLowerCase();
-  const subheadline = (req.nextUrl.searchParams.get("subheadline") || "").trim();
   const badge = (req.nextUrl.searchParams.get("badge") || "").trim().toUpperCase();
-  const quote = (req.nextUrl.searchParams.get("quote") || "").trim();
-  const quoteAuthor = (req.nextUrl.searchParams.get("author") || "").trim();
   const format = (req.nextUrl.searchParams.get("format") || "webp").toLowerCase();
   const download = req.nextUrl.searchParams.get("download") === "1";
   const title = req.nextUrl.searchParams.get("title") || "portada-facebook";
@@ -86,8 +70,8 @@ export async function GET(req: NextRequest) {
     }).png().toBuffer();
   }
 
-  let buf2 = url2 ? await fetchImageBuffer(url2) : null;
-  let buf3 = url3 ? await fetchImageBuffer(url3) : null;
+  const buf2 = url2 ? await fetchImageBuffer(url2) : null;
+  const buf3 = url3 ? await fetchImageBuffer(url3) : null;
 
   try {
     const compositeList: sharp.OverlayOptions[] = [];
@@ -174,27 +158,11 @@ export async function GET(req: NextRequest) {
     const bannerH = 54;
     const bannerTop = height - bannerH;
 
-    const iconSize = Math.round(bannerH * 0.60);
-    const iconY = Math.round((bannerH - iconSize) / 2);
-    const textFontSize = Math.round(bannerH * 0.40);
-    const textY = Math.round(bannerH * 0.66);
-
-    const textWidthApprox = Math.round(15 * 0.62 * textFontSize);
-    const gap = Math.round(textFontSize * 0.45);
-    const groupWidth = iconSize + gap + textWidthApprox;
-    const rightBannerWidth = Math.round(bannerH * 2.8);
-    const availableCenter = (width - rightBannerWidth / 2);
-    const startX = Math.round((availableCenter - groupWidth) / 2);
-    const textX = startX + iconSize + gap;
-
     const escapeXml = (str: string) =>
       str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 
     const safeHeadline = escapeXml(headline);
-    const safeSub = escapeXml(subheadline);
     const safeBadge = escapeXml(badge);
-    const safeQuote = escapeXml(quote);
-    const safeAuthor = escapeXml(quoteAuthor);
 
     // ── 1. Divisor fino si es split (Vector puro) ──
     if (style === "split") {
@@ -238,7 +206,7 @@ export async function GET(req: NextRequest) {
     }
 
     // ── 4. Cintillo Oficial Montecristi.net en la base (Trazados vectoriales <path>) ──
-    const cintilloBuf = await renderCintilloVector(width, bannerH, cachedIconSvg);
+    const cintilloBuf = await renderCintilloVector(width, bannerH);
     compositeList.push({ input: cintilloBuf, left: 0, top: bannerTop });
 
     const baseSharp = sharp({
@@ -260,7 +228,8 @@ export async function GET(req: NextRequest) {
 
     return new NextResponse(new Uint8Array(finalBuffer), { headers: corsHeaders });
 
-  } catch (err: any) {
-    return NextResponse.json({ error: "Error al generar imagen viral: " + (err?.message || "") }, { status: 500 });
+  } catch (err) {
+    console.error("[viral-image] Error generando imagen:", err);
+    return NextResponse.json({ error: "Error al generar la imagen viral." }, { status: 500 });
   }
 }

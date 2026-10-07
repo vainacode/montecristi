@@ -7,6 +7,7 @@ import React, {
   useEffect,
   useRef,
   useCallback,
+  useSyncExternalStore,
   ReactNode,
 } from 'react';
 
@@ -53,8 +54,17 @@ interface NewsReaderContextType {
 
 const NewsReaderContext = createContext<NewsReaderContextType | undefined>(undefined);
 
-// Reference global para evitar garbage collection en Chromium
-let globalUtterance: SpeechSynthesisUtterance | null = null;
+declare global {
+  interface Window {
+    // Referencia global a la cola de locuciones: evita que Chromium/WebKit las recolecte a mitad de lectura
+    __montecristi_tts_queue?: SpeechSynthesisUtterance[];
+  }
+}
+
+// El soporte de Web Speech no cambia durante la sesión: no hace falta suscribirse.
+const subscribeNoop = () => () => {};
+const getSpeechSupport = () => 'speechSynthesis' in window;
+const getServerSpeechSupport = () => true;
 
 /**
  * Normaliza abreviaciones y siglas dominicanas para una pronunciación de reportaje periodístico fluido
@@ -180,18 +190,31 @@ function cleanArticleContent(htmlContent: string, title: string, author?: string
 
 const STORAGE_VOICE_KEY = 'montecristi_tts_voice_uri';
 const STORAGE_RATE_KEY = 'montecristi_tts_rate';
+const ALLOWED_RATES = [0.75, 1, 1.25, 1.5, 2];
+
+function readSavedRate(): number {
+  if (typeof window === 'undefined') return 1;
+  try {
+    const parsed = parseFloat(localStorage.getItem(STORAGE_RATE_KEY) ?? '');
+    return ALLOWED_RATES.includes(parsed) ? parsed : 1;
+  } catch {
+    return 1;
+  }
+}
 
 export function NewsReaderProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<ReaderStatus>('idle');
   const [currentArticle, setCurrentArticle] = useState<ArticleAudioData | null>(null);
   const [chunks, setChunks] = useState<string[]>([]);
   const [currentChunkIndex, setCurrentChunkIndex] = useState<number>(0);
-  const [rate, setRateState] = useState<number>(1);
+  // Velocidad guardada por el usuario. El reproductor solo se muestra tras pulsar
+  // "Escuchar", así que leerla al crear el estado no provoca desajustes de hidratación.
+  const [rate, setRateState] = useState<number>(readSavedRate);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
   const [isVisible, setIsVisible] = useState<boolean>(false);
-  const [isSupported, setIsSupported] = useState<boolean>(true);
+  const isSupported = useSyncExternalStore(subscribeNoop, getSpeechSupport, getServerSpeechSupport);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const synthRef = useRef<SpeechSynthesis | null>(null);
@@ -199,22 +222,10 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
 
   // ── Inicializar Web Speech API y Cargar Voces con prioridad PABLO ───────────
   useEffect(() => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      setIsSupported(false);
-      return;
-    }
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
     synthRef.current = window.speechSynthesis;
 
-    try {
-      const savedRate = localStorage.getItem(STORAGE_RATE_KEY);
-      if (savedRate) {
-        const parsedRate = parseFloat(savedRate);
-        if ([0.75, 1, 1.25, 1.5, 2].includes(parsedRate)) {
-          setRateState(parsedRate);
-        }
-      }
-    } catch (_) {}
 
     const loadVoices = () => {
       if (!synthRef.current) return;
@@ -263,7 +274,7 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
             return;
           }
         }
-      } catch (_) {}
+      } catch {}
 
       // Buscar voz "Pablo" por defecto
       const pabloVoice = sortedSpanish.find(v => /pablo/i.test(v.name) || /pablo/i.test(v.voiceURI));
@@ -360,13 +371,13 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
     // 3. Guardar referencia persistente para evitar Garbage Collection en Chromium/WebKit
     activeUtterancesRef.current = utterances;
     if (typeof window !== 'undefined') {
-      (window as any).__montecristi_tts_queue = utterances;
+      window.__montecristi_tts_queue = utterances;
     }
 
     // 4. Encolar todas las locuciones de forma síncrona
     try {
       utterances.forEach(u => synthRef.current?.speak(u));
-    } catch (err) {
+    } catch {
       setErrorMessage('No se pudo iniciar la locución en este dispositivo.');
       setStatus('stopped');
     }
@@ -458,7 +469,7 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
     setRateState(newRate);
     try {
       localStorage.setItem(STORAGE_RATE_KEY, newRate.toString());
-    } catch (_) {}
+    } catch {}
 
     if (status === 'playing' && chunks.length > 0) {
       startSpeechFromIndex(currentChunkIndex, chunks, newRate, selectedVoice);
@@ -469,7 +480,7 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
     setSelectedVoice(newVoice);
     try {
       localStorage.setItem(STORAGE_VOICE_KEY, newVoice.voiceURI);
-    } catch (_) {}
+    } catch {}
 
     if (status === 'playing' && chunks.length > 0) {
       startSpeechFromIndex(currentChunkIndex, chunks, rate, newVoice);

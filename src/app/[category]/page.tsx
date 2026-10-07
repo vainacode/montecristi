@@ -1,4 +1,4 @@
-import { getPosts, getMontecristiPosts, getCategories, getCategorySlug } from "@/lib/wp";
+import { getPosts, getMontecristiPosts, getCategories } from "@/lib/wp";
 import { getMostReadPosts } from "@/lib/analytics";
 import { NewsCard } from "@/components/NewsCard";
 import { CustomAd } from "@/components/CustomAd";
@@ -7,8 +7,7 @@ import { MostRead } from "@/components/MostRead";
 import { siteConfig } from "@/config/site";
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { ArrowRight, BookOpen, MapPin, Newspaper } from "lucide-react";
+import { ArrowRight, BookOpen, MapPin } from "lucide-react";
 import type { Metadata } from "next";
 import type { WPPost } from "@/lib/wp";
 import { montecristiGuides, montecristiGuideKeywords } from "@/data/montecristiPorDentro";
@@ -20,11 +19,23 @@ interface CategoryPageProps {
   params: Promise<{ category: string }>;
 }
 
-const defaultConfig = {
+interface CategoryConfig {
+  description: string;
+  gradient: string;
+  accent: string;
+  image?: string;
+}
+
+const defaultConfig: CategoryConfig = {
   description: "Las noticias más recientes.",
   gradient: "from-brand-dark to-[#140405]",
   accent: "#BF1B23",
 };
+
+function getCategoryConfig(slug: string): CategoryConfig {
+  const configs: Record<string, CategoryConfig> = siteConfig.categoryConfig;
+  return configs[slug] ?? defaultConfig;
+}
 
 // ── Metadata ──────────────────────────────────────────────────────────────────
 
@@ -53,14 +64,14 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 
   const categories = await getCategories().catch(() => []);
   const category = categories.find((c) => c.slug === slug);
-  const cfg = siteConfig.categoryConfig[slug as keyof typeof siteConfig.categoryConfig] || defaultConfig;
+  const cfg = getCategoryConfig(slug);
 
   const catName = category?.name || slug.charAt(0).toUpperCase() + slug.slice(1);
   const seoTitle = `▷ Noticias de ${catName} hoy | Último Minuto | Montecristi`;
   const seoDesc = `Últimas noticias de ${catName} en Montecristi y la República Dominicana. ${cfg.description} Información actualizada al instante.`;
 
   // og:image siempre con URL absoluta para que Google y Facebook puedan crawlearla
-  const rawImage = (cfg as any).image ?? siteConfig.seo.defaultImage;
+  const rawImage = cfg.image ?? siteConfig.seo.defaultImage;
   const ogImage = rawImage.startsWith('http') ? rawImage : `${siteConfig.url}${rawImage}`;
 
   return {
@@ -88,7 +99,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 
 // ── Hero components per category ──────────────────────────────────────────────
 
-function GenericHero({ name, cfg }: { name: string; cfg: any }) {
+function GenericHero({ name, cfg }: { name: string; cfg: CategoryConfig }) {
   return (
     <div className={`relative min-h-[450px] flex items-end overflow-hidden`}>
       {cfg.image && (
@@ -192,7 +203,7 @@ async function CategoryContent({ slug }: { slug: string }) {
     getPosts({ per_page: 24 }).catch(() => []),
   ]);
 
-  const cfg = siteConfig.categoryConfig[slug as keyof typeof siteConfig.categoryConfig] || defaultConfig;
+  const cfg = getCategoryConfig(slug);
   const category = categories.find((c) => c.slug === slug);
   const categoryName = category?.name || slug.charAt(0).toUpperCase() + slug.slice(1);
 

@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { getFuelData } from '@/lib/fuels';
 
 export const dynamic = 'force-static';

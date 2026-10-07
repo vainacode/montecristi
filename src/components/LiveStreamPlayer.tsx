@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Play, Pause, Volume2, VolumeX, Maximize2, Radio, AlertCircle, RefreshCw } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize2, Radio, RefreshCw } from 'lucide-react';
+import type Hls from 'hls.js';
 
 interface LiveStreamPlayerProps {
   streamUrl?: string;
@@ -17,7 +18,6 @@ export function LiveStreamPlayer({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(1);
-  const [isLive, setIsLive] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -26,7 +26,7 @@ export function LiveStreamPlayer({
     const video = videoRef.current;
     if (!video) return;
 
-    let hlsInstance: any = null;
+    let hlsInstance: Hls | null = null;
     let isDestroyed = false;
 
     setIsLoading(true);
@@ -59,21 +59,21 @@ export function LiveStreamPlayer({
 
       // 2. Caso 2: Navegadores con soporte MediaSource (Chrome, Firefox, Edge, Android)
       try {
-        const HlsModule = await import('hls.js');
-        const Hls = HlsModule.default || HlsModule;
+        const { default: HlsClass } = await import('hls.js');
 
-        if (Hls.isSupported()) {
-          hlsInstance = new Hls({
+        if (HlsClass.isSupported()) {
+          const hls = new HlsClass({
             enableWorker: true,
             lowLatencyMode: true,
             backBufferLength: 30,
             maxLiveSyncPlaybackRate: 1.5,
           });
 
-          hlsInstance.loadSource(streamUrl);
-          hlsInstance.attachMedia(video);
+          hlsInstance = hls;
+          hls.loadSource(streamUrl);
+          hls.attachMedia(video);
 
-          hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+          hls.on(HlsClass.Events.MANIFEST_PARSED, () => {
             if (!isDestroyed) {
               setIsLoading(false);
               video.play().then(() => setIsPlaying(true)).catch(() => {
@@ -84,14 +84,14 @@ export function LiveStreamPlayer({
             }
           });
 
-          hlsInstance.on(Hls.Events.ERROR, (_: any, data: any) => {
+          hls.on(HlsClass.Events.ERROR, (_event, data) => {
             if (data.fatal) {
               switch (data.type) {
-                case Hls.ErrorTypes.NETWORK_ERROR:
-                  hlsInstance.startLoad();
+                case HlsClass.ErrorTypes.NETWORK_ERROR:
+                  hls.startLoad();
                   break;
-                case Hls.ErrorTypes.MEDIA_ERROR:
-                  hlsInstance.recoverMediaError();
+                case HlsClass.ErrorTypes.MEDIA_ERROR:
+                  hls.recoverMediaError();
                   break;
                 default:
                   if (!isDestroyed) {
@@ -99,7 +99,7 @@ export function LiveStreamPlayer({
                     setErrorMessage('Emisión temporalmente fuera de línea.');
                     setIsLoading(false);
                   }
-                  hlsInstance.destroy();
+                  hls.destroy();
                   break;
               }
             }
@@ -109,7 +109,7 @@ export function LiveStreamPlayer({
           setErrorMessage('Tu navegador no soporta reproducción de transmisiones HLS en vivo.');
           setIsLoading(false);
         }
-      } catch (err) {
+      } catch {
         // Fallback directo a src
         video.src = streamUrl;
         video.play().then(() => setIsPlaying(true)).catch(() => {});

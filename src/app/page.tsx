@@ -1,4 +1,4 @@
-import { getPosts, getMontecristiPosts, getFeaturedImage, getCategorySlug } from "@/lib/wp";
+import { getPosts, getMontecristiPosts } from "@/lib/wp";
 import { getMostReadPosts } from "@/lib/analytics";
 import { NewsCard } from "@/components/NewsCard";
 import { CustomAd } from "@/components/CustomAd";
@@ -10,7 +10,6 @@ import { MontecristiSpotlight } from "@/components/MontecristiSpotlight";
 import { MontecristiVideoSection } from "@/components/MontecristiVideoSection";
 import { siteConfig } from "@/config/site";
 import Link from "next/link";
-import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from 'react';

@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MapPin, Compass, Camera, ArrowRight, Play, Sun, Navigation } from 'lucide-react';
+import { Compass, Camera, ArrowRight, Sun, Navigation } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { getCategories, getPosts, getFeaturedImage, getCategorySlug, WPPost } from '@/lib/wp';
 

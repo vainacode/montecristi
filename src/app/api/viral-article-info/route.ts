@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function extractSlug(input: string): string {
-  let cleaned = input.trim();
+  const cleaned = input.trim();
   try {
     if (cleaned.startsWith("http://") || cleaned.startsWith("https://")) {
       const parsed = new URL(cleaned);
@@ -295,7 +295,8 @@ export async function GET(req: NextRequest) {
       ],
     });
 
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || "Error al procesar el artículo." }, { status: 500 });
+  } catch (err) {
+    console.error("[viral-article-info] Error procesando el artículo:", err);
+    return NextResponse.json({ error: "Error al procesar el artículo." }, { status: 500 });
   }
 }

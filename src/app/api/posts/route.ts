@@ -10,13 +10,14 @@ export async function GET(req: NextRequest) {
   const offset = Math.min(Math.max(parseInt(sanitizeInput(searchParams.get("offset") ?? "0"), 10) || 0, 0), 500);
   const per_page = Math.min(Math.max(parseInt(sanitizeInput(searchParams.get("per_page") ?? "18"), 10) || 18, 1), 30);
   const categoryRaw = sanitizeInput(searchParams.get("category") ?? "");
-  const category = categoryRaw ? parseInt(categoryRaw, 10) : undefined;
+  const parsedCategory = categoryRaw ? parseInt(categoryRaw, 10) : NaN;
+  const category = Number.isFinite(parsedCategory) && parsedCategory > 0 ? parsedCategory : undefined;
 
   try {
     const posts = await getPosts({
       offset,
       per_page,
-      category: isNaN(category as any) ? undefined : category,
+      category,
     });
 
     return NextResponse.json(posts, {

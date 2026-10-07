@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
-import { siteConfig } from '@/config/site';
+import Link from 'next/link';
 import { Target, Users, Landmark, Award, CheckCircle2, Heart, Zap, History, TrendingUp } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -185,9 +185,9 @@ export default function ConocenosPage() {
                         </p>
                     </div>
                     <div className="relative z-10">
-                        <a href="/contacto" className="inline-block bg-brand-dark text-white px-10 py-6 rounded-2xl font-black uppercase italic tracking-widest hover:bg-white hover:text-brand-dark transition-all duration-500 shadow-2xl hover:shadow-brand-dark/20">
+                        <Link href="/contacto" className="inline-block bg-brand-dark text-white px-10 py-6 rounded-2xl font-black uppercase italic tracking-widest hover:bg-white hover:text-brand-dark transition-all duration-500 shadow-2xl hover:shadow-brand-dark/20">
                             Contáctanos Ahora
-                        </a>
+                        </Link>
                     </div>
                 </div>
             </section>

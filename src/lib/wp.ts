@@ -16,16 +16,20 @@ interface CacheEntry<T> {
   expiresAt: number;
 }
 
-const memoryCache = new Map<string, CacheEntry<any>>();
-const inFlightRequests = new Map<string, Promise<any>>();
+const memoryCache = new Map<string, CacheEntry<unknown>>();
+const inFlightRequests = new Map<string, Promise<unknown>>();
 
+/**
+ * Caché en memoria con deduplicación y stale-while-revalidate.
+ * Devuelve null solo si nunca hubo un dato válido y la petición falla.
+ */
 async function cachedFetch<T>(
   cacheKey: string,
   fetcher: () => Promise<T>,
   ttlSeconds: number = siteConfig.api.revalidate
-): Promise<T> {
+): Promise<T | null> {
   const now = Date.now();
-  const cached = memoryCache.get(cacheKey);
+  const cached = memoryCache.get(cacheKey) as CacheEntry<T> | undefined;
 
   if (cached) {
     if (cached.expiresAt > now) return cached.data;
@@ -39,22 +43,18 @@ async function cachedFetch<T>(
   }
 
   // Deduplicate in-flight requests (solves thundering herd problem)
-  if (inFlightRequests.has(cacheKey)) {
-    return inFlightRequests.get(cacheKey)!;
-  }
+  const pending = inFlightRequests.get(cacheKey) as Promise<T | null> | undefined;
+  if (pending) return pending;
 
-  const promise = refreshCache(cacheKey, fetcher, ttlSeconds);
-
-  inFlightRequests.set(cacheKey, promise);
-  return promise;
+  return refreshCache(cacheKey, fetcher, ttlSeconds);
 }
 
 async function refreshCache<T>(
   cacheKey: string,
   fetcher: () => Promise<T>,
   ttlSeconds: number,
-): Promise<T> {
-  const promise = (async () => {
+): Promise<T | null> {
+  const promise = (async (): Promise<T | null> => {
     try {
       const data = await fetcher();
       if (data !== null && data !== undefined) {
@@ -64,12 +64,9 @@ async function refreshCache<T>(
         });
       }
       return data;
-    } catch (e) {
-      const existing = memoryCache.get(cacheKey);
-      if (existing) {
-        return existing.data;
-      }
-      return null as any;
+    } catch {
+      const existing = memoryCache.get(cacheKey) as CacheEntry<T> | undefined;
+      return existing ? existing.data : null;
     } finally {
       inFlightRequests.delete(cacheKey);
     }
@@ -443,28 +440,8 @@ export async function getCategories(): Promise<WPCategory[]> {
   return Array.isArray(categories) ? categories : [];
 }
 
-export async function getMedia(id: number) {
-  try {
-    const res = await fetchWithTimeout(`${BASE_URL}/media/${id}`, {
-      next: { revalidate: 86400 },
-    });
-
-    if (!res.ok) return null;
-    return await res.json();
-  } catch (e) {
-    return null;
-  }
-}
-
 export async function getTrendingPosts(): Promise<WPPost[]> {
-  try {
-    const posts = await getPosts({ per_page: siteConfig.content.topPostsCount });
-    if (posts && posts.length > 0) return posts;
-  } catch (e) {
-    // disregard
-  }
-
-  return [];
+  return getPosts({ per_page: siteConfig.content.topPostsCount }).catch(() => []);
 }
 
 // Las URLs que vienen de WordPress a veces llegan como "http://", "//host/..." o
@@ -489,7 +466,7 @@ export async function getGalleries(params: {
 
   const cacheKey = `galleries:${query.toString()}`;
 
-  return cachedFetch(cacheKey, async () => {
+  const result = await cachedFetch(cacheKey, async () => {
     try {
       const res = await fetchWithTimeout(`${BASE_URL}/galerias?${query.toString()}`, {
         next: { revalidate: siteConfig.api.revalidate },
@@ -512,6 +489,7 @@ export async function getGalleries(params: {
       return { galleries: [], total: 0, totalPages: 0 };
     }
   }, siteConfig.api.revalidate);
+  return result ?? { galleries: [], total: 0, totalPages: 0 };
 }
 
 export async function getGalleryBySlug(slug: string): Promise<WPGallery | null> {

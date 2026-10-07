@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useNewsReader, ArticleAudioData } from '@/context/NewsReaderContext';
-import { Headphones, Play, Pause } from 'lucide-react';
+import { Headphones, Play } from 'lucide-react';
 
 interface ListenButtonProps {
   article: ArticleAudioData;

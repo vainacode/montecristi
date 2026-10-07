@@ -17,17 +17,6 @@ const LOGO_SVG = join(process.cwd(), "public", "logo.svg");
 const LOGO_BLANCO = join(process.cwd(), "public", "logoBlanco.png");
 const LOGO_PATH = existsSync(LOGO_SVG) ? LOGO_SVG : (existsSync(LOGO_BLANCO) ? LOGO_BLANCO : join(process.cwd(), "public", "logo.png"));
 
-// Extraer el icono del logo SVG para el cintillo
-let cachedIconSvg = "";
-try {
-  if (existsSync(LOGO_SVG)) {
-    const raw = readFileSync(LOGO_SVG, "utf8");
-    const match = raw.match(/<g id="icono">([\s\S]*?)<\/g>/);
-    if (match) cachedIconSvg = match[1];
-  }
-} catch {
-  // Fallback si no se puede leer
-}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -127,7 +116,7 @@ export async function GET(req: NextRequest) {
     const bannerH = Math.max(44, Math.round(h * 0.08));
     const bannerTop = h - bannerH;
 
-    const cintilloBuf = await renderCintilloVector(w, bannerH, cachedIconSvg);
+    const cintilloBuf = await renderCintilloVector(w, bannerH);
 
     compositeList.push({
       input: cintilloBuf,

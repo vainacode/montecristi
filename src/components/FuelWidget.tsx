@@ -31,7 +31,6 @@ export function FuelWidget({ className = '', fuelData }: FuelWidgetProps) {
           const isEven = index % 2 === 0;
           const isFlat = fuel.trend === 'flat' || fuel.id === 'gas-natural' || fuel.delta === 0;
           const isDown = fuel.trend === 'down';
-          const isUp = fuel.trend === 'up' || (!isFlat && !isDown);
 
           // Color y símbolo de variación
           const symbol = isFlat ? '=' : isDown ? '↓' : '↑';

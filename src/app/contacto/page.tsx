@@ -1,6 +1,5 @@
 import { Metadata } from 'next';
-import { Mail, Briefcase, FileText, Send, MapPin } from 'lucide-react';
-import { siteConfig } from '@/config/site';
+import { Briefcase, FileText, MapPin } from 'lucide-react';
 import { ContactForm } from '@/components/ContactForm';
 
 export const metadata: Metadata = {

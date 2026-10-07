@@ -1,5 +1,4 @@
 import { getGalleries } from "@/lib/wp";
-import { siteConfig } from "@/config/site";
 import { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";

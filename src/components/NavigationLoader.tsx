@@ -2,7 +2,6 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { FullPageSkeleton } from './FullPageSkeleton';
 
 function LoaderEvents({ setIsLoading }: { setIsLoading: (val: boolean) => void }) {
     const pathname = usePathname();
@@ -50,7 +49,7 @@ export function NavigationLoader() {
                 if (isInternal && !isSamePage) {
                     setIsLoading(true);
                 }
-            } catch (err) {
+            } catch {
                 // Enlace inválido, ignorar
             }
         };

@@ -2,18 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import {
-  Printer,
-  ChevronLeft,
-  ChevronRight,
-  Share2,
-  Check,
-  ZoomIn,
-  ZoomOut,
-  Newspaper,
-  Eye,
-  FileText
-} from 'lucide-react';
+import { Printer, ChevronLeft, ChevronRight, Share2, Check, ZoomIn, ZoomOut, Newspaper, Eye } from 'lucide-react';
 import type { WPPost } from '@/lib/wp-helpers';
 import { getFeaturedImage, getCategoryNames } from '@/lib/wp-helpers';
 import { siteConfig } from '@/config/site';
@@ -113,8 +102,6 @@ export function PrintEditionReader({
   const coverSecond = allGeneral[1] || null;
   const coverSidebar1 = allGeneral[2] || null;
   const coverSidebar2 = allGeneral[3] || null;
-  const coverBottom1 = allGeneral[4] || null;
-  const coverBottom2 = allGeneral[5] || null;
 
   // PÁG 2: MONTECRISTI & LA LÍNEA NOROESTE (100% Noticias Locales Reales)
   const p2Lead = allLocal[0] || allGeneral[6] || null;

@@ -2,25 +2,13 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import {
-  TrendingDown,
-  TrendingUp,
-  Minus,
-  Calculator,
-  Copy,
-  Check,
-  Fuel,
-  ExternalLink,
-  Flame
-} from 'lucide-react';
+import { Calculator, Copy, Check, ExternalLink, Flame } from 'lucide-react';
 import type { FuelData, FuelItem } from '@/data/fuels';
-import { CustomAd } from '@/components/CustomAd';
 
 export function CombustiblesClient({ fuelData }: { fuelData: FuelData }) {
   const [selectedFuel, setSelectedFuel] = useState<FuelItem>(fuelData.fuels[0]);
   const [gallons, setGallons] = useState<number>(12);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
-  const [activeHistoryFuel, setActiveHistoryFuel] = useState<string>('Gasolina Premium');
 
   const embedCode = `<iframe src="https://montecristi.net/widget.php" width="340" height="420" frameborder="0" style="border-radius:12px;"></iframe>`;
 

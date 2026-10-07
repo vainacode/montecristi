@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import { siteConfig } from '@/config/site';
 
 // Set a nivel de módulo: persiste entre el desmontaje/remontaje de Strict Mode
 const firedPosts = new Set<number>();

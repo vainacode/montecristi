@@ -1,11 +1,10 @@
 export const revalidate = 30;
 
-import { lookupPostBySlug, getPosts, getFeaturedImage, getCategoryNames, getCategorySlug, getTrendingPosts, WPPost } from "@/lib/wp";
+import { lookupPostBySlug, getPosts, getFeaturedImage, getCategoryNames, getCategorySlug, getTrendingPosts } from "@/lib/wp";
 import { NewsCard } from "@/components/NewsCard";
 import { ProtectedImage } from "@/components/ProtectedImage";
 import { MostRead } from "@/components/MostRead";
 import { CustomAd } from "@/components/CustomAd";
-import { AuthorBox } from "@/components/AuthorBox";
 import { ListenButton } from "@/components/AudioNewsReader";
 import { ViewTracker } from "@/components/ViewTracker";
 import { siteConfig } from "@/config/site";
@@ -56,7 +55,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     post.excerpt.rendered.replace(/<[^>]*>/g, '').slice(0, 160);
 
   const canonicalUrl = `${siteConfig.url}/${getCategorySlug(post)}/${post.slug}`;
-  const keywords = post._embedded?.['wp:term']?.[1]?.map((t: any) => t.name).join(', ') || siteConfig.seo.keywords.join(', ');
+  const keywords = post._embedded?.['wp:term']?.[1]?.map((t) => t.name).join(', ') || siteConfig.seo.keywords.join(', ');
   const categoryNames = getCategoryNames(post);
 
   return {
@@ -558,7 +557,7 @@ async function ArticleContent({ slug }: { slug: string }) {
         "inLanguage": "es-DO",
         "isAccessibleForFree": "True",
         "articleSection": categories[0] || "Noticias",
-        "keywords": postTags.map((t: any) => t.name).join(", "),
+        "keywords": postTags.map((t) => t.name).join(", "),
         "author": {
           "@type": "Person",
           "name": "Redacción Montecristi",
@@ -656,7 +655,7 @@ async function ArticleContent({ slug }: { slug: string }) {
                   Facebook
                 </span>
               )}
-              {postTags.slice(0, 3).map((tag: any) => (
+              {postTags.slice(0, 3).map((tag) => (
                 <span key={tag.id} className="bg-brand-dark text-white px-3 py-1 rounded-sm text-[9px] font-black uppercase tracking-widest opacity-80 ring-1 ring-brand-light/20">
                   # {tag.name}
                 </span>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { 
   RefreshCw, 
@@ -32,24 +32,7 @@ export function ApiFallbackScreen({
   const [countdown, setCountdown] = useState(25);
   const [autoRetry, setAutoRetry] = useState(true);
 
-  // Auto retry countdown
-  useEffect(() => {
-    if (!autoRetry || isRetrying) return;
-
-    const interval = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          handleRetry();
-          return 25;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [autoRetry, isRetrying]);
-
-  const handleRetry = () => {
+  const handleRetry = useCallback(() => {
     setIsRetrying(true);
     if (onRetry) {
       onRetry();
@@ -57,7 +40,27 @@ export function ApiFallbackScreen({
     } else {
       window.location.reload();
     }
-  };
+  }, [onRetry]);
+
+  // Cuenta regresiva de reintento automático. El reintento se lanza desde el
+  // intervalo (no dentro del actualizador de estado, que debe ser puro).
+  const countdownRef = useRef(25);
+  useEffect(() => {
+    if (!autoRetry || isRetrying) return;
+
+    const interval = setInterval(() => {
+      countdownRef.current -= 1;
+      if (countdownRef.current <= 0) {
+        countdownRef.current = 25;
+        setCountdown(25);
+        handleRetry();
+      } else {
+        setCountdown(countdownRef.current);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [autoRetry, isRetrying, handleRetry]);
 
   const editorialSections = [
     {

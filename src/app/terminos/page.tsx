@@ -20,7 +20,7 @@ export default function TerminosPage() {
                          prose-headings:font-black prose-headings:italic prose-headings:uppercase prose-headings:tracking-tighter prose-headings:text-brand-dark
                          prose-a:text-brand-light hover:prose-a:text-brand-dark transition-colors">
           <h2>1. Aceptación de los Términos</h2>
-          <p>El acceso y uso de <strong>{siteConfig.url}</strong> (en adelante "El Portal") atribuye la condición de usuario, e implica la aceptación total y sin reservas de las presentes Condiciones de Uso. Si el usuario no está de acuerdo con estas condiciones, deberá abstenerse de utilizar el sitio.</p>
+          <p>El acceso y uso de <strong>{siteConfig.url}</strong> (en adelante &ldquo;El Portal&rdquo;) atribuye la condición de usuario, e implica la aceptación total y sin reservas de las presentes Condiciones de Uso. Si el usuario no está de acuerdo con estas condiciones, deberá abstenerse de utilizar el sitio.</p>
 
           <h2>2. Uso Correcto del Portal</h2>
           <p>El usuario se compromete a hacer un uso adecuado de los contenidos y servicios que <strong>{siteConfig.name}</strong> ofrece. Queda estrictamente prohibido utilizar el portal para incurrir en actividades ilícitas, ilegales o contrarias a la buena fe y al orden público.</p>

@@ -35,6 +35,22 @@ interface RecentPost {
   url: string;
 }
 
+type ImageStyle = 'split' | 'circle' | 'play' | 'single';
+type HeadlinePosition = 'bottom' | 'top' | 'center';
+
+const STYLE_OPTIONS: { id: ImageStyle; name: string; desc: string }[] = [
+  { id: 'split', name: '⚡ Split Shock', desc: '50/50 Dos Fotos' },
+  { id: 'circle', name: '🎯 3 Fotos (Círculo)', desc: 'Izq + Der + Círculo' },
+  { id: 'play', name: '▶️ Play Badge', desc: 'Para videos' },
+  { id: 'single', name: '🖼️ Foto Única', desc: '1 foto completa' },
+];
+
+const HEADLINE_POSITIONS: { id: HeadlinePosition; label: string }[] = [
+  { id: 'bottom', label: '⬇️ Abajo (Sobre el cintillo - Recomendado)' },
+  { id: 'top', label: '⬆️ Arriba (Cabecera)' },
+  { id: 'center', label: '↔️ Centro' },
+];
+
 const BADGE_PRESETS = [
   'FARÁNDULA',
   'VIRAL',
@@ -60,7 +76,7 @@ function RedaccionFbContent() {
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>([]);
 
   // Configuración de imagen limpia (photo-first)
-  const [style, setStyle] = useState<'split' | 'circle' | 'play' | 'single'>('split');
+  const [style, setStyle] = useState<ImageStyle>('split');
   const [img1, setImg1] = useState<string>('');
   const [img2, setImg2] = useState<string>('');
   const [img3, setImg3] = useState<string>('');
@@ -69,7 +85,7 @@ function RedaccionFbContent() {
   // Titular en la imagen (opcional)
   const [enableTextOverlay, setEnableTextOverlay] = useState<boolean>(true);
   const [headline, setHeadline] = useState<string>('');
-  const [headlinePos, setHeadlinePos] = useState<'bottom' | 'top' | 'center'>('bottom');
+  const [headlinePos, setHeadlinePos] = useState<HeadlinePosition>('bottom');
   const [suggestedHeadlines, setSuggestedHeadlines] = useState<{ id: string; name: string; text: string }[]>([]);
 
   // Contador de versión para refresco instantáneo sin caché
@@ -138,8 +154,8 @@ function RedaccionFbContent() {
       setImgVersion((v) => v + 1);
 
       router.replace(`/redaccion-fb?url=${encodeURIComponent(targetUrl)}`, { scroll: false });
-    } catch (err: any) {
-      setError(err.message || 'Error al procesar el artículo.');
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : 'Error al procesar el artículo.');
     } finally {
       setLoading(false);
     }
@@ -427,17 +443,12 @@ function RedaccionFbContent() {
                   Composición Visual:
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[
-                    { id: 'split', name: '⚡ Split Shock', desc: '50/50 Dos Fotos' },
-                    { id: 'circle', name: '🎯 3 Fotos (Círculo)', desc: 'Izq + Der + Círculo' },
-                    { id: 'play', name: '▶️ Play Badge', desc: 'Para videos' },
-                    { id: 'single', name: '🖼️ Foto Única', desc: '1 foto completa' },
-                  ].map((s) => (
+                  {STYLE_OPTIONS.map((s) => (
                     <button
                       key={s.id}
                       type="button"
                       onClick={() => {
-                        setStyle(s.id as any);
+                        setStyle(s.id);
                         triggerImageRefresh();
                       }}
                       className={`p-2.5 rounded-xl border text-left transition-all ${
@@ -637,16 +648,12 @@ function RedaccionFbContent() {
                           Lugar donde colocar el titular:
                         </span>
                         <div className="flex flex-wrap gap-1.5">
-                          {[
-                            { id: 'bottom', label: '⬇️ Abajo (Sobre el cintillo - Recomendado)' },
-                            { id: 'top', label: '⬆️ Arriba (Cabecera)' },
-                            { id: 'center', label: '↔️ Centro' },
-                          ].map((pos) => (
+                          {HEADLINE_POSITIONS.map((pos) => (
                             <button
                               key={pos.id}
                               type="button"
                               onClick={() => {
-                                setHeadlinePos(pos.id as any);
+                                setHeadlinePos(pos.id);
                                 triggerImageRefresh();
                               }}
                               className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer ${

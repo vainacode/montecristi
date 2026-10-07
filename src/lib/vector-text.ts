@@ -1,12 +1,12 @@
 import TextToSVG from 'text-to-svg';
 import path from 'path';
 
-let textToSVGInstance: any = null;
+let textToSVGInstance: TextToSVG | null = null;
 
-function getTextToSVG(): any {
+function getTextToSVG(): TextToSVG {
   if (textToSVGInstance) return textToSVGInstance;
   const fontPath = path.join(process.cwd(), 'src', 'fonts', 'Roboto-Black.ttf');
-  textToSVGInstance = (TextToSVG as any).loadSync(fontPath);
+  textToSVGInstance = TextToSVG.loadSync(fontPath);
   return textToSVGInstance;
 }
 
@@ -131,7 +131,6 @@ export async function renderBadgeVector(
 export async function renderCintilloVector(
   width: number,
   height: number,
-  iconSvgContent: string = ''
 ): Promise<Buffer> {
   const tts = getTextToSVG();
   const text = 'MONTECRISTI.NET';
