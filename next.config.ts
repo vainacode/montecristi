@@ -65,15 +65,7 @@ const nextConfig: NextConfig = {
         source: '/:path*',
         headers: securityHeaders,
       },
-      {
-        source: '/_next/static/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
+      // /_next/static ya lo sirve Next.js como immutable; sobrescribirlo genera un aviso en el build.
       {
         source: '/(.*).(jpg|jpeg|png|webp|svg|ico|woff|woff2)',
         headers: [

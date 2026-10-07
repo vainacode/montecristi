@@ -6,8 +6,9 @@ export const revalidate = 60;
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
-  const offset = parseInt(sanitizeInput(searchParams.get("offset") ?? "0"), 10) || 0;
-  const per_page = parseInt(sanitizeInput(searchParams.get("per_page") ?? "18"), 10) || 18;
+  // Acotados: WordPress rechaza per_page > 100 y un offset enorme solo genera carga inútil.
+  const offset = Math.min(Math.max(parseInt(sanitizeInput(searchParams.get("offset") ?? "0"), 10) || 0, 0), 500);
+  const per_page = Math.min(Math.max(parseInt(sanitizeInput(searchParams.get("per_page") ?? "18"), 10) || 18, 1), 30);
   const categoryRaw = sanitizeInput(searchParams.get("category") ?? "");
   const category = categoryRaw ? parseInt(categoryRaw, 10) : undefined;
 

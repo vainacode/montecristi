@@ -107,7 +107,12 @@ async function fetchWPJson<T = unknown>(url: string, revalidate: number): Promis
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const res = await fetchWithTimeout(url, { next: { revalidate } });
-      if (!res.ok) throw new Error(`HTTP ${res.status} en ${url}`);
+      if (!res.ok) {
+        const error = new Error(`HTTP ${res.status} en ${url}`);
+        // Un 4xx no se arregla reintentando (403 de un firewall, 400 de parámetros).
+        if (res.status < 500) attempt = 1;
+        throw error;
+      }
       const text = await res.text();
       try {
         return JSON.parse(text.replace(/^\uFEFF/, "")) as T;
@@ -278,53 +283,56 @@ export async function getMontecristiPosts(params: {
   return Array.isArray(posts) ? posts : [];
 }
 
-export async function getPostBySlug(slug: string): Promise<WPPost | null> {
+/**
+ * Busca un artículo por slug en ambas fuentes.
+ * - `{ post }` con el artículo si existe.
+ * - `{ post: null }` si WordPress respondió y el artículo NO existe (→ 404 real).
+ * - `null` si ninguna fuente respondió (WordPress caído o bloqueado).
+ */
+export async function lookupPostBySlug(slug: string): Promise<{ post: WPPost | null } | null> {
   const cleanSlug = encodeURIComponent(decodeURIComponent(slug).trim());
   const cacheKey = `post:slug:${cleanSlug}`;
+  const revalidate = siteConfig.api.revalidate;
+  const montecristiBase = siteConfig.api.montecristiUrl || "https://www.santosvasquezinforma.com/wp-json/wp/v2";
 
   return cachedFetch(cacheKey, async () => {
-    // 1. Buscar en la fuente principal
-    try {
-      const res = await fetchWithTimeout(`${BASE_URL}/posts?slug=${cleanSlug}&_embed=1`, {
-        next: { revalidate: siteConfig.api.revalidate },
-      });
+    let anySourceAnswered = false;
 
-      if (res.ok) {
-        const posts = await res.json();
-        if (Array.isArray(posts) && posts.length > 0) return posts[0];
+    // 1. Fuente principal  2. Fuente de Montecristi (santosvasquezinforma.com)
+    for (const base of [BASE_URL, montecristiBase]) {
+      try {
+        const posts = await fetchWPJson<WPPost[]>(`${base}/posts?slug=${cleanSlug}&_embed=1`, revalidate);
+        anySourceAnswered = true;
+        if (Array.isArray(posts) && posts.length > 0) return { post: posts[0] };
+      } catch (e) {
+        console.error(`[WP] Error fetching post by slug from ${base}:`, e);
       }
-    } catch (e) {
-      console.error('[WP] Error fetching post by slug from primary source:', e);
     }
 
-    // 2. Buscar en la fuente de Montecristi (santosvasquezinforma.com)
-    try {
-      const montecristiBase = siteConfig.api.montecristiUrl || "https://www.santosvasquezinforma.com/wp-json/wp/v2";
-      const resMonte = await fetchWithTimeout(`${montecristiBase}/posts?slug=${cleanSlug}&_embed=1`, {
-        next: { revalidate: siteConfig.api.revalidate },
-      });
-
-      if (resMonte.ok) {
-        const postsMonte = await resMonte.json();
-        if (Array.isArray(postsMonte) && postsMonte.length > 0) return postsMonte[0];
-      }
-
-      // Si el slug es numérico (ID de post en santosvasquezinforma)
-      if (/^\d+$/.test(cleanSlug)) {
-        const resById = await fetchWithTimeout(`${montecristiBase}/posts/${cleanSlug}?_embed=1`, {
-          next: { revalidate: siteConfig.api.revalidate },
+    // 3. Si el slug es numérico (ID de post en santosvasquezinforma)
+    if (/^\d+$/.test(cleanSlug)) {
+      try {
+        const res = await fetchWithTimeout(`${montecristiBase}/posts/${cleanSlug}?_embed=1`, {
+          next: { revalidate },
         });
-        if (resById.ok) {
-          const postById = await resById.json();
-          if (postById && postById.id) return postById;
+        if (res.ok || res.status === 404) anySourceAnswered = true;
+        if (res.ok) {
+          const postById = await res.json();
+          if (postById && postById.id) return { post: postById as WPPost };
         }
+      } catch (e) {
+        console.error('[WP] Error fetching post by ID from Montecristi source:', e);
       }
-    } catch (e) {
-      console.error('[WP] Error fetching post by slug from Montecristi source:', e);
     }
 
-    return null;
-  }, siteConfig.api.revalidate);
+    // Sin respuesta de ninguna fuente: lanzamos para no cachear un falso "no existe".
+    if (!anySourceAnswered) throw new Error(`WordPress no respondió para el slug ${cleanSlug}`);
+    return { post: null };
+  }, revalidate);
+}
+
+export async function getPostBySlug(slug: string): Promise<WPPost | null> {
+  return (await lookupPostBySlug(slug))?.post ?? null;
 }
 
 export async function getCategories(): Promise<WPCategory[]> {

@@ -1,6 +1,6 @@
 export const revalidate = 30;
 
-import { getPostBySlug, getPosts, getFeaturedImage, getCategoryNames, getCategorySlug, getTrendingPosts, WPPost } from "@/lib/wp";
+import { lookupPostBySlug, getPosts, getFeaturedImage, getCategoryNames, getCategorySlug, getTrendingPosts, WPPost } from "@/lib/wp";
 import { NewsCard } from "@/components/NewsCard";
 import { ProtectedImage } from "@/components/ProtectedImage";
 import { MostRead } from "@/components/MostRead";
@@ -23,8 +23,10 @@ interface ArticlePageProps {
 
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
   const { slug } = await params;
-  const post = await getPostBySlug(slug);
+  const lookup = await lookupPostBySlug(slug);
+  if (lookup && !lookup.post) notFound();
 
+  const post = lookup?.post;
   if (!post) return { robots: { index: false, follow: false } };
 
   const rm = post.rank_math_head_json;
@@ -452,8 +454,13 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
 async function ArticleContent({ slug }: { slug: string }) {
   // Ejecutamos las peticiones en paralelo para no bloquear secuencialmente
-  const post = await getPostBySlug(slug);
+  const lookup = await lookupPostBySlug(slug);
 
+  // WordPress respondió y el artículo no existe: 404 real (no una página 200 vacía
+  // que Google indexaría como "soft 404").
+  if (lookup && !lookup.post) notFound();
+
+  const post = lookup?.post;
   if (!post) {
     return (
       <ApiFallbackScreen 

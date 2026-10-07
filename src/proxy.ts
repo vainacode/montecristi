@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 
 /**
- * Middleware de seguridad + compatibilidad con Cloudflare.
+ * Proxy (antes "middleware") de seguridad + compatibilidad con Cloudflare.
  *
  * Lo que hace:
  *  - Bloquea bots comunes con User-Agent vacío o malicioso
@@ -11,7 +11,7 @@ import { rateLimit } from "@/lib/rate-limit";
  *  - Protege rutas de API con rate-limit básico
  *  - Rate limiting por usuario (IP) por minuto
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // ── Identificación de usuario (IP) ──
@@ -22,11 +22,23 @@ export function middleware(request: NextRequest) {
     "127.0.0.1";
   
   // ── Rate Limiting ──
-  // Limitar a 60 peticiones por minuto por IP (excepto assets estáticos)
+  // Límite por IP y minuto (excepto assets estáticos, buscadores y prefetch)
   const isAsset = pathname.startsWith("/_next") || pathname.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/i);
   
   if (!isAsset) {
-    const limitResult = rateLimit(ip, 60, 60000);
+    const ua = request.headers.get("user-agent")?.toLowerCase() ?? "";
+
+    // Buscadores y redes sociales no se limitan: un 429 a Googlebot o al bot de
+    // Google News saca artículos del índice, y a Facebook/WhatsApp les rompe la vista previa.
+    const isCrawler = /googlebot|google-inspectiontool|googleother|adsbot-google|mediapartners-google|storebot-google|bingbot|duckduckbot|yandex|applebot|facebookexternalhit|facebookcatalog|meta-externalagent|twitterbot|whatsapp|telegrambot|linkedinbot|slackbot|discordbot/.test(ua);
+
+    // Los prefetch de <Link> no son navegación real; no deben gastar el cupo del visitante.
+    const isPrefetch = request.headers.has("next-router-prefetch") || request.headers.get("purpose") === "prefetch";
+
+    // Muchos usuarios de datos móviles en RD comparten IP (CGNAT), por eso el cupo es amplio.
+    const limitResult = isCrawler || isPrefetch
+      ? { success: true, limit: 0, remaining: 0, resetAt: 0 }
+      : rateLimit(ip, 240, 60000);
     
     if (!limitResult.success) {
       return new NextResponse("Too Many Requests", { 
@@ -44,9 +56,11 @@ export function middleware(request: NextRequest) {
     const response = NextResponse.next();
     
     // Agregar headers informativos
-    response.headers.set("X-RateLimit-Limit", limitResult.limit.toString());
-    response.headers.set("X-RateLimit-Remaining", limitResult.remaining.toString());
-    response.headers.set("X-RateLimit-Reset", limitResult.resetAt.toString());
+    if (limitResult.limit > 0) {
+      response.headers.set("X-RateLimit-Limit", limitResult.limit.toString());
+      response.headers.set("X-RateLimit-Remaining", limitResult.remaining.toString());
+      response.headers.set("X-RateLimit-Reset", limitResult.resetAt.toString());
+    }
 
     // ── Bloqueo de rutas maliciosas / hackers ───────────────────────────────────
     const hackerPaths = [
@@ -56,12 +70,17 @@ export function middleware(request: NextRequest) {
       "/wp-json/wp/v2/users"
     ];
 
-    if (hackerPaths.some(path => pathname.toLowerCase().startsWith(path.toLowerCase()))) {
+    // "/auth" y "/admin" se comparan por segmento completo para no bloquear
+    // categorías como "/administracion-publica"; el resto por prefijo ("/wp-login.php").
+    const lowerPath = pathname.toLowerCase();
+    const segmentOnly = new Set(["/auth", "/admin"]);
+    if (hackerPaths.some(path => segmentOnly.has(path)
+      ? lowerPath === path || lowerPath.startsWith(`${path}/`)
+      : lowerPath.startsWith(path))) {
       return NextResponse.rewrite(new URL("/404", request.url));
     }
 
     // ── Bot / scraper básico: bloquear UA vacío o malicioso ────────────────────
-    const ua = request.headers.get("user-agent")?.toLowerCase() ?? "";
     const botKeywords = [
       "python-requests", "cheerio", "beautifulsoup", "headlesschrome",
       "puppeteer", "wget", "curl", "libwww-perl", "axios", "node-fetch",
