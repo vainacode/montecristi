@@ -83,6 +83,17 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        // Los iconos no llevan hash en el nombre: sin "immutable" para que un cambio
+        // de favicon llegue a los navegadores (la regla anterior queda sobrescrita).
+        source: '/:icon(favicon\\.ico|favicon\\.svg|icono\\.png|apple-icon\\.png|icon-512\\.png)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, must-revalidate',
+          },
+        ],
+      },
     ];
   },
   images: {
