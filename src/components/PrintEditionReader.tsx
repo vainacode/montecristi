@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { Printer, ChevronLeft, ChevronRight, Share2, Check, ZoomIn, ZoomOut, Newspaper, Eye } from 'lucide-react';
 import type { WPPost } from '@/lib/wp-helpers';
-import { getFeaturedImage, getCategoryNames } from '@/lib/wp-helpers';
+import { getFeaturedImage, getCategoryNames, isLocalImage } from '@/lib/wp-helpers';
 import { siteConfig } from '@/config/site';
 
 interface PrintEditionProps {
@@ -337,7 +337,7 @@ export function PrintEditionReader({
                       {/* Foto Principal de Portada */}
                       <div className="relative aspect-[16/9] w-full bg-gray-100 border border-gray-300 overflow-hidden shadow-xs">
                         <Image
-                          src={getFeaturedImage(coverLead) || siteConfig.seo.defaultImage}
+                          src={getFeaturedImage(coverLead) || siteConfig.seo.defaultImage} unoptimized={!isLocalImage(getFeaturedImage(coverLead))}
                           alt="Foto Noticia Portada"
                           fill
                           priority
@@ -390,7 +390,7 @@ export function PrintEditionReader({
                           {cleanTitle(coverSidebar1.title.rendered)}
                         </h4>
                         <div className="relative aspect-video w-full bg-gray-100 border border-gray-200 overflow-hidden my-1.5">
-                          <Image src={getFeaturedImage(coverSidebar1) || siteConfig.seo.defaultImage} alt="Foto Lateral" fill className="object-cover" />
+                          <Image src={getFeaturedImage(coverSidebar1) || siteConfig.seo.defaultImage} unoptimized={!isLocalImage(getFeaturedImage(coverSidebar1))} alt="Foto Lateral" fill className="object-cover" />
                         </div>
                         <div className="text-justify font-serif text-[11.5px] text-gray-800 leading-relaxed space-y-1.5">
                           {getPrintParagraphs(coverSidebar1.content?.rendered || coverSidebar1.excerpt?.rendered || '').slice(0, 3).map((para, idx) => (
@@ -566,7 +566,7 @@ export function PrintEditionReader({
                   <div className="grid grid-cols-12 gap-5 items-start">
                     <div className="col-span-12 md:col-span-5 space-y-1.5">
                       <div className="relative aspect-[4/3] w-full bg-gray-100 border border-gray-300 overflow-hidden shadow-xs">
-                        <Image src={getFeaturedImage(page.lead) || siteConfig.seo.defaultImage} alt="Foto Noticia" fill className="object-cover" />
+                        <Image src={getFeaturedImage(page.lead) || siteConfig.seo.defaultImage} unoptimized={!isLocalImage(getFeaturedImage(page.lead))} alt="Foto Noticia" fill className="object-cover" />
                       </div>
                       <p className="text-[10.5px] text-gray-600 italic leading-snug font-serif">
                         Cobertura informativa especial de Montecristi.net para la edición impresa.
@@ -601,7 +601,7 @@ export function PrintEditionReader({
                       </h3>
 
                       <div className="relative aspect-video w-full bg-gray-100 border border-gray-300 overflow-hidden my-2">
-                        <Image src={getFeaturedImage(page.second) || siteConfig.seo.defaultImage} alt="Foto Noticia 2" fill className="object-cover" />
+                        <Image src={getFeaturedImage(page.second) || siteConfig.seo.defaultImage} unoptimized={!isLocalImage(getFeaturedImage(page.second))} alt="Foto Noticia 2" fill className="object-cover" />
                       </div>
 
                       <div className="columns-1 sm:columns-2 gap-4 text-justify font-serif text-[12px] text-gray-800 leading-relaxed">

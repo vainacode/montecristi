@@ -89,28 +89,22 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
-    formats: ['image/avif', 'image/webp'],
-    minimumCacheTTL: 86400,
+    // Solo WebP: cada formato extra es otra transformación que cuenta en la cuota de
+    // Vercel (AVIF además es lento de generar). Las fotos de noticias no cambian: 30 días.
+    formats: ['image/webp'],
+    minimumCacheTTL: 2592000,
     deviceSizes: [320, 480, 640, 750, 828, 1080, 1200, 1440],
+    // Solo dominios conocidos: con "**" el optimizador era un proxy abierto que cualquiera
+    // podía usar para gastar la cuota de imágenes. Las fotos de las fuentes llegan como
+    // rutas propias (/media/...); si alguna foto externa no está aquí, ProtectedImage la
+    // carga directa.
     remotePatterns: [
-      { protocol: "https", hostname: "noticiariord.net" },
-      { protocol: "http", hostname: "noticiariord.net" },
-      { protocol: "https", hostname: "www.santosvasquezinforma.com" },
-      { protocol: "http", hostname: "www.santosvasquezinforma.com" },
-      { protocol: "https", hostname: "santosvasquezinforma.com" },
-      { protocol: "http", hostname: "santosvasquezinforma.com" },
-      { protocol: "https", hostname: "redaccion.morroinformativo.com" },
-      { protocol: "https", hostname: "deultimominuto.net" },
-      { protocol: "http", hostname: "deultimominuto.net" },
-      { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "i.ytimg.com" },
+      { protocol: "https", hostname: "i.ibb.co" },
       { protocol: "https", hostname: "secure.gravatar.com" },
       { protocol: "https", hostname: "i0.wp.com" },
       { protocol: "https", hostname: "i1.wp.com" },
       { protocol: "https", hostname: "i2.wp.com" },
-      { protocol: "https", hostname: "remolacha.net" },
-      // Catch-all for other CDNs if WP uses S3/Cloudfront
-      { protocol: "https", hostname: "**" }
     ],
   },
 };

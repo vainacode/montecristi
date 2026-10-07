@@ -1,4 +1,4 @@
-import { getGalleries } from "@/lib/wp";
+import { getGalleries, SITE_TIME_ZONE } from "@/lib/wp";
 import { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -108,6 +108,7 @@ export default async function GalleriesPage({
                   <span>{gallery.author.name}</span>
                   <span>
                     {new Date(gallery.date).toLocaleDateString("es-DO", {
+                  timeZone: SITE_TIME_ZONE,
                       year: "numeric",
                       month: "short",
                       day: "numeric",

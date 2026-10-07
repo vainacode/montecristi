@@ -203,23 +203,14 @@ export default async function RootLayout({
         "publisher": {
           "@id": `${siteConfig.url}/#organization`
         },
-        "inLanguage": "es-DO",
-        "potentialAction": {
-          "@type": "SearchAction",
-          "target": `${siteConfig.url}/?s={search_term_string}`,
-          "query-input": "required name=search_term_string"
-        }
+        "inLanguage": "es-DO"
       }
     ]
   };
 
   return (
-    <html lang="es" className={fontVariables} data-scroll-behavior="smooth">
+    <html lang="es-DO" className={fontVariables} data-scroll-behavior="smooth">
       <head>
-        {/* Preconnects críticos para medios de WordPress */}
-        <link rel="preconnect" href="https://i0.wp.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://i0.wp.com" />
-        
         {/* Schema.org NewsMediaOrganization & WebSite */}
         <script
           type="application/ld+json"

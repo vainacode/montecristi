@@ -3,6 +3,58 @@
  * cliente: no contiene URLs de las fuentes ni hace peticiones.
  */
 
+const NAMED_ENTITIES: Record<string, string> = {
+  nbsp: "\u00a0", quot: '"', apos: "'", lt: "<", gt: ">",
+  hellip: "…", ndash: "–", mdash: "—", laquo: "«", raquo: "»",
+  lsquo: "‘", rsquo: "’", ldquo: "“", rdquo: "”", iexcl: "¡", iquest: "¿",
+  aacute: "á", eacute: "é", iacute: "í", oacute: "ó", uacute: "ú", ntilde: "ñ", uuml: "ü",
+  Aacute: "Á", Eacute: "É", Iacute: "Í", Oacute: "Ó", Uacute: "Ú", Ntilde: "Ñ", Uuml: "Ü",
+};
+
+/**
+ * HTML de WordPress → texto plano: quita etiquetas y decodifica entidades
+ * (&#8220;, &aacute;, &amp;…). Para títulos, descripciones y metadatos SEO.
+ */
+export function toPlainText(html: string | null | undefined): string {
+  if (!html) return "";
+  return html
+    .replace(/<[^>]*>/g, "")
+    .replace(/&#(\d+);/g, (_, n: string) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n: string) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/&([a-z]+);/gi, (m, name: string) => NAMED_ENTITIES[name] ?? m)
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * ¿La imagen se sirve desde nuestro dominio? Las externas no pasan por el optimizador
+ * (solo admite dominios conocidos), así que se cargan con `unoptimized`.
+ */
+export function isLocalImage(src: string | null | undefined): boolean {
+  return !src || (src.startsWith("/") && !src.startsWith("//"));
+}
+
+export const SITE_TIME_ZONE = "America/Santo_Domingo";
+
+/** Formatea una fecha en la hora de República Dominicana (igual en servidor y navegador). */
+export function formatDate(
+  date: string | Date,
+  options: Intl.DateTimeFormatOptions = { day: "numeric", month: "long", year: "numeric" },
+): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("es-DO", { ...options, timeZone: SITE_TIME_ZONE });
+}
+
+/** Recorta un texto en el último espacio antes de `max` caracteres, con "…". */
+export function truncateText(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max - 1);
+  const lastSpace = cut.lastIndexOf(" ");
+  return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
+}
+
 export function slugify(text: string): string {
   return text
     .toString()
@@ -18,6 +70,11 @@ export function slugify(text: string): string {
 export interface WPPost {
   id: number;
   date: string;
+  /** Última modificación (ISO). Ausente en posts que vienen del RSS. */
+  modified?: string;
+  /** Fechas en UTC sin zona ("2026-10-06T14:00:00"), tal como las da WordPress. */
+  date_gmt?: string;
+  modified_gmt?: string;
   slug: string;
   title: {
     rendered: string;

@@ -1,4 +1,4 @@
-import { getGalleryBySlug } from "@/lib/wp";
+import { getGalleryBySlug, SITE_TIME_ZONE } from "@/lib/wp";
 import { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -6,6 +6,11 @@ import { CustomAd } from "@/components/CustomAd";
 import { ArrowLeft } from "lucide-react";
 
 export const revalidate = 300;
+
+// ISR: cada galería se genera en la primera visita y queda en caché.
+export async function generateStaticParams() {
+  return [];
+}
 
 export async function generateMetadata({
   params,
@@ -110,6 +115,7 @@ export default async function GalleryDetailPage({
               <span>•</span>
               <span>
                 {new Date(gallery.date).toLocaleDateString("es-DO", {
+                  timeZone: SITE_TIME_ZONE,
                   year: "numeric",
                   month: "long",
                   day: "numeric",

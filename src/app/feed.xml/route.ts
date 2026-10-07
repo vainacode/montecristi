@@ -1,5 +1,6 @@
 import { getPosts, getFeaturedImage, getCategorySlug } from "@/lib/wp";
 import { siteConfig } from "@/config/site";
+import { toPlainText, truncateText } from "@/lib/wp-helpers";
 
 export const revalidate = 180; // Actualiza el feed cada 3 minutos
 
@@ -14,11 +15,11 @@ export async function GET() {
             const imageUrl = rawImage.startsWith("/") ? `${siteConfig.url}${rawImage}` : rawImage;
             // Los lectores RSS no resuelven rutas relativas como /media/...
             const content = post.content.rendered.replace(/(src|srcset|href)=(["'])\/(?!\/)/g, `$1=$2${siteConfig.url}/`);
-            const description = post.excerpt.rendered.replace(/<[^>]*>/g, "").slice(0, 260);
+            const description = truncateText(toPlainText(post.excerpt.rendered), 260);
 
             return `
         <item>
-          <title><![CDATA[${post.title.rendered.replace(/<[^>]*>/g, "")}]]></title>
+          <title><![CDATA[${toPlainText(post.title.rendered)}]]></title>
           <link>${url}</link>
           <guid isPermaLink="true">${url}</guid>
           <pubDate>${new Date(post.date).toUTCString()}</pubDate>
@@ -26,7 +27,7 @@ export async function GET() {
           <category><![CDATA[${catSlug.toUpperCase()}]]></category>
           <description><![CDATA[${description}]]></description>
           <content:encoded><![CDATA[${content}]]></content:encoded>
-          ${imageUrl ? `<media:content url="${imageUrl}" medium="image" width="1200" height="630"><media:title><![CDATA[${post.title.rendered.replace(/<[^>]*>/g, "")}]]></media:title></media:content>` : ""}
+          ${imageUrl ? `<media:content url="${imageUrl}" medium="image" width="1200" height="630"><media:title><![CDATA[${toPlainText(post.title.rendered)}]]></media:title></media:content>` : ""}
           ${imageUrl ? `<enclosure url="${imageUrl}" length="0" type="image/jpeg" />` : ""}
         </item>`;
         })

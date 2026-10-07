@@ -60,6 +60,7 @@ export function MostRead({ posts }: MostReadProps) {
                   src={imgUrl}
                   alt=""
                   fill
+                  unoptimized={!imgUrl.startsWith("/")}
                   sizes="80px"
                   className="object-contain group-hover:scale-105 transition-transform duration-500"
                 />

@@ -1,4 +1,4 @@
-import { getPosts, getCategorySlug, WPPost } from "@/lib/wp";
+import { getPosts, getCategorySlug, formatDate, WPPost } from "@/lib/wp";
 import { siteConfig } from "@/config/site";
 import Link from "next/link";
 import Image from "next/image";
@@ -243,7 +243,7 @@ export default async function SitemapPage() {
                         <span>·</span>
                         <div className="flex items-center gap-1">
                           <Calendar size={11} />
-                          <span>{new Date(post.date).toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                          <span>{formatDate(post.date, { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                         </div>
                       </div>
                     </div>

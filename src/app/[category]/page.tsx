@@ -13,7 +13,13 @@ import type { WPPost } from "@/lib/wp";
 import { montecristiGuides, montecristiGuideKeywords } from "@/data/montecristiPorDentro";
 import { ApiFallbackScreen } from "@/components/ApiFallbackScreen";
 
-export const revalidate = 30;
+export const revalidate = 60;
+
+// ISR: cada categoría se genera en la primera visita y queda en caché; se renueva en
+// segundo plano según `revalidate`. Sin esto la ruta se renderizaba en cada visita.
+export async function generateStaticParams() {
+  return [];
+}
 
 interface CategoryPageProps {
   params: Promise<{ category: string }>;

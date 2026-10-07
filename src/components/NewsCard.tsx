@@ -1,23 +1,6 @@
-import { WPPost, getFeaturedImage, getCategoryNames, getCategorySlug } from "@/lib/wp-helpers";
+import { WPPost, getFeaturedImage, getCategoryNames, getCategorySlug, toPlainText } from "@/lib/wp-helpers";
 import Link from "next/link";
 import { ProtectedImage } from "./ProtectedImage";
-
-/**
- * Decodifica entidades HTML y elimina etiquetas para renderizar títulos de
- * WordPress de forma segura como texto plano (sin dangerouslySetInnerHTML).
- */
-function decodeEntities(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#039;/g, "'")
-    .replace(/&nbsp;/g, "\u00a0")
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n))
-    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)));
-}
 
 interface NewsCardProps {
   post: WPPost;
@@ -50,8 +33,8 @@ export function NewsCard({
             }`}>
             <ProtectedImage
               src={imageUrl}
-              alt={post.title.rendered}
-              title={post.title.rendered}
+              alt={toPlainText(post.title.rendered)}
+              title={toPlainText(post.title.rendered)}
               fill
               priority={priority}
               sizes={variant === "hero" ? "(max-width: 768px) 100vw, (max-width: 1200px) 75vw, 60vw" : "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"}
@@ -69,11 +52,11 @@ export function NewsCard({
 
           {variant === "hero" ? (
             <h2 className="font-bold text-gray-900 leading-[1.2] tracking-tight group-hover:text-brand-dark transition-colors text-2xl md:text-3xl">
-              {decodeEntities(post.title.rendered)}
+              {toPlainText(post.title.rendered)}
             </h2>
           ) : (
             <h3 className="font-bold text-gray-900 leading-[1.2] tracking-tight group-hover:text-brand-dark transition-colors text-lg">
-              {decodeEntities(post.title.rendered)}
+              {toPlainText(post.title.rendered)}
             </h3>
           )}
 

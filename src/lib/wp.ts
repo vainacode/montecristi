@@ -8,6 +8,10 @@ export * from "@/lib/wp-helpers";
 
 const BASE_URL = sources.main.api;
 
+// Solo incrustamos lo que usamos (foto destacada y categorías/etiquetas): sin autor,
+// comentarios ni revisiones, la respuesta de WordPress pesa bastante menos.
+const EMBED = "wp:featuredmedia,wp:term";
+
 // Cache local con deduplicación y stale-while-revalidate. En despliegues serverless
 // reduce los golpes repetidos a WordPress mientras la caché persistente de Next.js
 // se encarga de compartir resultados entre invocaciones.
@@ -86,8 +90,21 @@ function scrubPost<T>(post: T): T {
   }
 }
 
+// WordPress da `date`/`modified` en hora local del sitio SIN zona horaria; en el servidor
+// (UTC) eso se leería 4 horas corrido. Usamos las versiones _gmt y las dejamos en ISO con "Z".
+function withUtc(gmt: string | undefined): string | undefined {
+  if (!gmt) return undefined;
+  return /[zZ]|[+-]\d{2}:?\d{2}$/.test(gmt) ? gmt : `${gmt}Z`;
+}
+
+function normalizePost(post: WPPost): WPPost {
+  const scrubbed = scrubPost(post);
+  const date = withUtc(scrubbed.date_gmt) ?? scrubbed.date;
+  return { ...scrubbed, date, modified: withUtc(scrubbed.modified_gmt) ?? scrubbed.modified ?? date };
+}
+
 function scrubPosts(posts: unknown): WPPost[] {
-  return Array.isArray(posts) ? posts.map((p) => scrubPost(p as WPPost)) : [];
+  return Array.isArray(posts) ? posts.map((p) => normalizePost(p as WPPost)) : [];
 }
 
 // Algunos WordPress (Wordfence, LiteSpeed, Cloudflare) bloquean peticiones con el
@@ -277,12 +294,12 @@ export async function getPosts(params: {
   // Las listas solo necesitan título, imagen y categorías. Evitamos enviar el
   // contenido completo de cada artículo y el resto del payload de WordPress.
   const fields = [
-    'id', 'date', 'slug', 'title', 'excerpt', 'featured_media',
+    'id', 'date', 'date_gmt', 'modified', 'modified_gmt', 'slug', 'title', 'excerpt', 'featured_media',
     'featured_media_url', 'jetpack_featured_media_url', 'dum_api',
     'categories', '_links', '_embedded', 'yoast_head_json', 'rank_math_head_json',
   ];
   if (params.includeContent) fields.push('content');
-  query.append('_embed', '1');
+  query.append('_embed', EMBED);
   query.append('_fields', fields.join(','));
 
   const cacheKey = `posts:${params.categorySlug ?? ''}:${query.toString()}`;
@@ -324,9 +341,9 @@ export async function getMontecristiPosts(params: {
   if (params.per_page) query.append('per_page', params.per_page.toString());
   if (params.page) query.append('page', params.page.toString());
   if (params.offset) query.append('offset', params.offset.toString());
-  query.append('_embed', '1');
+  query.append('_embed', EMBED);
   const fields = [
-    'id', 'date', 'slug', 'title', 'excerpt', 'featured_media',
+    'id', 'date', 'date_gmt', 'modified', 'modified_gmt', 'slug', 'title', 'excerpt', 'featured_media',
     'featured_media_url', 'jetpack_featured_media_url', 'dum_api',
     'categories', '_links', '_embedded', 'yoast_head_json', 'rank_math_head_json',
   ];
@@ -373,7 +390,7 @@ async function lookupPostBySlugRaw(slug: string): Promise<{ post: WPPost | null 
     // 1. Fuente principal  2. Fuente de Montecristi (santosvasquezinforma.com)
     for (const base of [BASE_URL, montecristiBase]) {
       try {
-        const posts = await fetchWPJson<WPPost[]>(`${base}/posts?slug=${cleanSlug}&_embed=1`, revalidate);
+        const posts = await fetchWPJson<WPPost[]>(`${base}/posts?slug=${cleanSlug}&_embed=${EMBED}`, revalidate);
         anySourceAnswered = true;
         if (Array.isArray(posts) && posts.length > 0) return { post: posts[0] };
       } catch (e) {
@@ -384,7 +401,7 @@ async function lookupPostBySlugRaw(slug: string): Promise<{ post: WPPost | null 
     // 3. Si el slug es numérico (ID de post en santosvasquezinforma)
     if (/^\d+$/.test(cleanSlug)) {
       try {
-        const res = await fetchWithTimeout(`${montecristiBase}/posts/${cleanSlug}?_embed=1`, {
+        const res = await fetchWithTimeout(`${montecristiBase}/posts/${cleanSlug}?_embed=${EMBED}`, {
           next: { revalidate },
         });
         if (res.ok || res.status === 404) anySourceAnswered = true;
@@ -417,7 +434,7 @@ async function lookupPostBySlugRaw(slug: string): Promise<{ post: WPPost | null 
 
 export async function lookupPostBySlug(slug: string): Promise<{ post: WPPost | null } | null> {
   const result = await lookupPostBySlugRaw(slug);
-  return result?.post ? { post: scrubPost(result.post) } : result;
+  return result?.post ? { post: normalizePost(result.post) } : result;
 }
 
 export async function getPostBySlug(slug: string): Promise<WPPost | null> {

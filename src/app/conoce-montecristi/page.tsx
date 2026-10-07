@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Compass, Camera, ArrowRight, Sun, Navigation } from 'lucide-react';
 import { siteConfig } from '@/config/site';
-import { getCategories, getPosts, getFeaturedImage, getCategorySlug, WPPost } from '@/lib/wp';
+import { getCategories, getPosts, getFeaturedImage, getCategorySlug, isLocalImage, toPlainText, WPPost } from '@/lib/wp';
 
 export const metadata: Metadata = {
   title: 'Conoce a Montecristi | Guía Turística y Videos',
@@ -174,9 +174,10 @@ export default async function ConoceMontecristiPage() {
                     className={`group flex flex-col bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] border border-gray-100 overflow-hidden transform hover:-translate-y-1 transition-all duration-500 ${isFeatured ? 'md:col-span-2 lg:col-span-2 md:flex-row' : ''}`}
                  >
                     <div className={`relative overflow-hidden ${isFeatured ? 'md:w-3/5' : 'w-full aspect-[4/3]'}`}>
-                       <Image 
-                         src={getFeaturedImage(article)} 
-                         alt={article.title.rendered} 
+                       <Image
+                         src={getFeaturedImage(article) || siteConfig.seo.defaultImage}
+                         unoptimized={!isLocalImage(getFeaturedImage(article))}
+                         alt={toPlainText(article.title.rendered)}
                          fill
                          sizes="(max-width: 768px) 100vw, 50vw"
                          className="object-contain group-hover:scale-105 transition-transform duration-1000 ease-out" 

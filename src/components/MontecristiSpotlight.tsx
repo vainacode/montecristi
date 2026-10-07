@@ -1,24 +1,11 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { WPPost, getFeaturedImage, getCategorySlug } from '@/lib/wp-helpers';
+import { WPPost, getFeaturedImage, getCategorySlug, toPlainText, formatDate } from '@/lib/wp-helpers';
 import { ProtectedImage } from './ProtectedImage';
 import { ArrowRight, Clock, Radio } from 'lucide-react';
 
 interface MontecristiSpotlightProps {
   posts: WPPost[];
-}
-
-function decodeEntities(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#039;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n))
-    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)));
 }
 
 function formatPostDate(dateStr: string): string {
@@ -42,11 +29,7 @@ function formatPostDate(dateStr: string): string {
       return `Hace ${diffDays} días`;
     }
 
-    return postDate.toLocaleDateString('es-DO', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
+    return formatDate(postDate);
   } catch {
     return dateStr;
   }
@@ -115,7 +98,7 @@ export function MontecristiSpotlight({ posts }: MontecristiSpotlightProps) {
         {topPosts.map((post) => {
           const imageUrl = getFeaturedImage(post);
           const catSlug = getCategorySlug(post) || 'montecristi';
-          const cleanTitle = decodeEntities(post.title.rendered);
+          const cleanTitle = toPlainText(post.title.rendered);
           const displayDate = formatPostDate(post.date);
 
           return (

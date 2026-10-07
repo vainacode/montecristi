@@ -1,5 +1,6 @@
-export const revalidate = 30;
+export const revalidate = 120;
 
+import { toPlainText, truncateText, formatDate } from "@/lib/wp-helpers";
 import { lookupPostBySlug, getPosts, getFeaturedImage, getCategoryNames, getCategorySlug, getTrendingPosts } from "@/lib/wp";
 import { NewsCard } from "@/components/NewsCard";
 import { ProtectedImage } from "@/components/ProtectedImage";
@@ -15,6 +16,12 @@ import { Calendar, Send } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Metadata } from 'next';
 import { ApiFallbackScreen } from "@/components/ApiFallbackScreen";
+
+// ISR: cada artículo se genera en la primera visita y queda en caché; se renueva en
+// segundo plano según `revalidate`. Sin esto la ruta se renderizaba en cada visita.
+export async function generateStaticParams() {
+  return [];
+}
 
 interface ArticlePageProps {
   params: Promise<{ category: string, slug: string }>;
@@ -48,11 +55,12 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     rawImage ||
     siteDefault;
 
-  const title = rm?.title || yoast?.title || post.title.rendered.replace(/<[^>]*>/g, '');
-  const description =
-    rm?.description ||
-    yoast?.og_description ||
-    post.excerpt.rendered.replace(/<[^>]*>/g, '').slice(0, 160);
+  // Título propio del artículo (no el SEO de la fuente, que trae su marca); la plantilla agrega "| Montecristi.net".
+  const title = toPlainText(post.title.rendered);
+  const description = truncateText(
+    toPlainText(rm?.description || yoast?.og_description || post.excerpt.rendered),
+    160,
+  );
 
   const canonicalUrl = `${siteConfig.url}/${getCategorySlug(post)}/${post.slug}`;
   const keywords = post._embedded?.['wp:term']?.[1]?.map((t) => t.name).join(', ') || siteConfig.seo.keywords.join(', ');
@@ -75,8 +83,8 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     },
     openGraph: {
       type: "article",
-      title: rm?.og_title || yoast?.og_title || title,
-      description: rm?.og_description || yoast?.og_description || description,
+      title,
+      description,
       url: canonicalUrl,
       siteName: siteConfig.name,
       locale: "es_DO",
@@ -90,14 +98,14 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
         },
       ],
       publishedTime: new Date(post.date).toISOString(),
-      modifiedTime: new Date(post.date).toISOString(),
+      modifiedTime: new Date(post.modified ?? post.date).toISOString(),
       authors: ["Redacción Montecristi"],
       section: categoryNames[0] || "Noticias",
     },
     twitter: {
       card: 'summary_large_image',
-      title: rm?.twitter_title || yoast?.twitter_title || title,
-      description: rm?.twitter_description || yoast?.twitter_description || description,
+      title,
+      description,
       images: [twitterImageUrl],
       creator: siteConfig.seo.twitterHandle,
       site: siteConfig.seo.twitterHandle,
@@ -490,8 +498,10 @@ async function ArticleContent({ slug }: { slug: string }) {
   const categories = getCategoryNames(post);
   const catSlug = getCategorySlug(post);
   const postTags = post._embedded?.['wp:term']?.[1] || [];
-  const shareUrl = `${siteConfig.url}/${catSlug}/${slug}`;
-  const shareTitle = post.title.rendered;
+  // URL canónica (slug del post, no el de la ruta, que puede venir codificado o con otra categoría).
+  const shareUrl = `${siteConfig.url}/${catSlug}/${post.slug}`;
+  const shareUrlParam = encodeURIComponent(shareUrl);
+  const shareTitleParam = encodeURIComponent(toPlainText(post.title.rendered));
 
   const formattedContent = formatContent(post.content.rendered, catSlug);
   
@@ -522,8 +532,8 @@ async function ArticleContent({ slug }: { slug: string }) {
   const hasFacebook = rawContent.includes('facebook.com/plugins') || rawContent.includes('fb-post');
 
   const siteDefault = `${siteConfig.url}${siteConfig.seo.defaultImage}`;
-  const cleanHeadline = post.title.rendered.replace(/<[^>]*>/g, '');
-  const cleanExcerpt = post.excerpt.rendered.replace(/<[^>]*>/g, '').slice(0, 160);
+  const cleanHeadline = toPlainText(post.title.rendered);
+  const cleanExcerpt = truncateText(toPlainText(post.excerpt.rendered), 160);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -553,7 +563,7 @@ async function ArticleContent({ slug }: { slug: string }) {
           `${imageUrl}#1x1`
         ] : [siteDefault],
         "datePublished": new Date(post.date).toISOString(),
-        "dateModified": new Date(post.date).toISOString(),
+        "dateModified": new Date(post.modified ?? post.date).toISOString(),
         "inLanguage": "es-DO",
         "isAccessibleForFree": "True",
         "articleSection": categories[0] || "Noticias",
@@ -584,7 +594,7 @@ async function ArticleContent({ slug }: { slug: string }) {
           "@type": "WebPage",
           "@id": shareUrl
         },
-        "articleBody": post.content.rendered.replace(/<[^>]*>/g, '').slice(0, 3000)
+        "articleBody": truncateText(toPlainText(post.content.rendered), 3000)
       },
       {
         "@type": "BreadcrumbList",
@@ -680,7 +690,7 @@ async function ArticleContent({ slug }: { slug: string }) {
               <span className="w-px h-3 bg-gray-200" />
               <div className="flex items-center gap-2">
                 <Calendar size={14} className="text-brand-dark" />
-                <span>{new Date(post.date).toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                <span>{formatDate(post.date)}</span>
               </div>
             </div>
 
@@ -689,9 +699,9 @@ async function ArticleContent({ slug }: { slug: string }) {
               <ListenButton
                 article={{
                   id: post.id,
-                  title: post.title.rendered.replace(/<[^>]*>/g, ''),
+                  title: toPlainText(post.title.rendered),
                   author: "Redacción Montecristi",
-                  date: new Date(post.date).toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' }),
+                  date: formatDate(post.date),
                   category: categories[0] || 'NOTICIAS',
                   slug: post.slug,
                   categorySlug: catSlug,
@@ -705,8 +715,8 @@ async function ArticleContent({ slug }: { slug: string }) {
             <div className="relative aspect-[16/10] sm:aspect-[4/3] max-h-[320px] sm:max-h-none rounded-sm overflow-hidden shadow-2xl ring-1 ring-gray-200">
               <ProtectedImage
                 src={rawImageUrl}
-                alt={post.title.rendered}
-                title={post.title.rendered}
+                alt={toPlainText(post.title.rendered)}
+                title={toPlainText(post.title.rendered)}
                 fill
                 className="w-full h-full"
                 priority
@@ -725,16 +735,16 @@ async function ArticleContent({ slug }: { slug: string }) {
             {/* Responsive Social Share */}
             <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 mb-8 pb-4 border-b border-gray-100">
               <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 mr-2 shrink-0">COMPARTIR:</span>
-              <Link href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-[#1877F2] text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-xs">
+              <Link href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrlParam}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-[#1877F2] text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-xs">
                 <IconFacebook size={14} /> Facebook
               </Link>
-              <Link href={`https://twitter.com/intent/tweet?text=${shareTitle}&url=${shareUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-xs">
+              <Link href={`https://twitter.com/intent/tweet?text=${shareTitleParam}&url=${shareUrlParam}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-xs">
                 <IconTwitter size={14} /> Twitter/X
               </Link>
-              <Link href={`https://wa.me/?text=${shareTitle}%20${shareUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-[#25D366] text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-xs">
+              <Link href={`https://wa.me/?text=${shareTitleParam}%20${shareUrlParam}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-[#25D366] text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-xs">
                 <IconWhatsApp size={14} /> WhatsApp
               </Link>
-              <Link href={`https://t.me/share/url?url=${shareUrl}&text=${shareTitle}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-[#0088cc] text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-xs">
+              <Link href={`https://t.me/share/url?url=${shareUrlParam}&text=${shareTitleParam}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-[#0088cc] text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-xs">
                 <Send size={13} /> Telegram
               </Link>
             </div>
@@ -805,16 +815,16 @@ async function ArticleContent({ slug }: { slug: string }) {
       <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] py-3 px-4 flex items-center justify-between gap-3">
         <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Compartir:</span>
         <div className="flex items-center gap-3">
-          <Link href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`} target="_blank" className="w-10 h-10 bg-[#1877F2] text-white rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform">
+          <Link href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrlParam}`} target="_blank" className="w-10 h-10 bg-[#1877F2] text-white rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform">
             <IconFacebook />
           </Link>
-          <Link href={`https://twitter.com/intent/tweet?url=${shareUrl}`} target="_blank" className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform">
+          <Link href={`https://twitter.com/intent/tweet?url=${shareUrlParam}`} target="_blank" className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform">
             <IconTwitter />
           </Link>
-          <Link href={`https://wa.me/?text=${shareTitle}%20${shareUrl}`} target="_blank" className="w-10 h-10 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform">
+          <Link href={`https://wa.me/?text=${shareTitleParam}%20${shareUrlParam}`} target="_blank" className="w-10 h-10 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform">
             <IconWhatsApp />
           </Link>
-          <Link href={`https://t.me/share/url?url=${shareUrl}`} target="_blank" className="w-10 h-10 bg-[#0088cc] text-white rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform">
+          <Link href={`https://t.me/share/url?url=${shareUrlParam}`} target="_blank" className="w-10 h-10 bg-[#0088cc] text-white rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform">
             <Send size={18} />
           </Link>
         </div>
