@@ -119,6 +119,8 @@ const SOURCE_DOMAINS = [
   'relojinformativo.do',
   'morroinformativo.com',
   'deultimominuto.net',
+  'deultimominuto.com',
+  'www.deultimominuto.com',
   'remolacha.net'
 ];
 

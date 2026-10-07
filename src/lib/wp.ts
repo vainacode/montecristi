@@ -207,6 +207,119 @@ export interface WPCategory {
   count: number;
 }
 
+// ════════════════════════════════════════════════════════════════════════════════
+// RESPALDO RSS
+// Si la API REST de WordPress falla (desactivada, bloqueada por firewall/Cloudflare,
+// caída), leemos el feed RSS público del mismo sitio y lo convertimos a WPPost.
+// ════════════════════════════════════════════════════════════════════════════════
+
+function decodeXml(text: string): string {
+  // El contenido en CDATA ya es HTML tal cual; solo el texto fuera de CDATA lleva entidades XML.
+  const cdata = text.match(/^\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*$/);
+  if (cdata) return cdata[1].trim();
+  return text
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&apos;/g, "'").replace(/&amp;/g, "&")
+    .trim();
+}
+
+function xmlTag(block: string, tag: string): string {
+  const escaped = tag.replace(":", "\\:");
+  const m = block.match(new RegExp(`<${escaped}(?:\\s[^>]*)?>([\\s\\S]*?)</${escaped}>`, "i"));
+  return m ? decodeXml(m[1]) : "";
+}
+
+function slugFromLink(link: string): string {
+  try {
+    const parts = new URL(link).pathname.split("/").filter(Boolean);
+    return decodeURIComponent(parts[parts.length - 1] || "");
+  } catch {
+    return "";
+  }
+}
+
+function hashId(text: string): number {
+  let h = 0;
+  for (let i = 0; i < text.length; i++) h = (Math.imul(31, h) + text.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+export function parseFeed(xml: string): WPPost[] {
+  const items = xml.match(/<item\b[\s\S]*?<\/item>/gi) || [];
+  return items.map((item) => {
+    const link = xmlTag(item, "link");
+    const guid = xmlTag(item, "guid");
+    const title = xmlTag(item, "title");
+    const description = xmlTag(item, "description");
+    const content = xmlTag(item, "content:encoded") || description;
+    const pubDate = xmlTag(item, "pubDate");
+    const date = pubDate && !isNaN(Date.parse(pubDate)) ? new Date(pubDate).toISOString() : new Date().toISOString();
+    const categoryNames = Array.from(item.matchAll(/<category\b[^>]*>([\s\S]*?)<\/category>/gi)).map((m) => decodeXml(m[1])).filter(Boolean);
+    const image =
+      item.match(/<media:content\b[^>]*url=["']([^"']+)["']/i)?.[1] ||
+      item.match(/<media:thumbnail\b[^>]*url=["']([^"']+)["']/i)?.[1] ||
+      item.match(/<enclosure\b[^>]*url=["']([^"']+)["'][^>]*type=["']image/i)?.[1] ||
+      content.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] ||
+      description.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] ||
+      "";
+    const id = Number(guid.match(/[?&]p=(\d+)/)?.[1]) || hashId(link || guid || title);
+    const terms = categoryNames.map((name, i) => ({ id: i + 1, name, slug: slugify(name) }));
+
+    return {
+      id,
+      date,
+      slug: slugFromLink(link) || String(id),
+      title: { rendered: title },
+      excerpt: { rendered: description },
+      content: { rendered: content },
+      categories: [],
+      jetpack_featured_media_url: image ? decodeXml(image) : undefined,
+      _embedded: { "wp:term": [terms] },
+    } as WPPost;
+  }).filter((p) => p.title.rendered && p.slug);
+}
+
+/**
+ * Lee un feed RSS de WordPress y devuelve los posts entre `offset` y `offset + perPage`.
+ * WordPress entrega ~10 ítems por página del feed, así que pedimos `?paged=N` hasta tener suficientes.
+ */
+async function getFeedPosts(feedUrl: string, perPage: number, offset = 0): Promise<WPPost[]> {
+  const needed = offset + perPage;
+  const collected: WPPost[] = [];
+  const seen = new Set<string>();
+
+  for (let page = 1; page <= 6 && collected.length < needed; page++) {
+    const url = page === 1 ? feedUrl : `${feedUrl}${feedUrl.includes("?") ? "&" : "?"}paged=${page}`;
+    let res: Response;
+    try {
+      res = await fetchWithTimeout(url, {
+        headers: { Accept: "application/rss+xml, application/xml, text/xml, */*" },
+        next: { revalidate: siteConfig.api.revalidate },
+      });
+    } catch (e) {
+      if (page === 1) throw e;
+      break;
+    }
+    if (!res.ok) {
+      if (page === 1) throw new Error(`Feed HTTP ${res.status} en ${url}`);
+      break; // páginas siguientes que no existen devuelven 404
+    }
+    const xml = await res.text();
+    if (page === 1 && !/<rss|<feed|<item/i.test(xml)) {
+      throw new Error(`El feed no es RSS válido en ${url}: ${xml.slice(0, 120)}`);
+    }
+    const items = parseFeed(xml).filter((p) => !seen.has(p.slug) && seen.add(p.slug));
+    if (items.length === 0) break;
+    collected.push(...items);
+  }
+
+  return collected.slice(offset, needed);
+}
+
+function siteRootFromApi(apiUrl: string): string {
+  return apiUrl.replace(/\/wp-json\/.*$/, "");
+}
+
 export async function getPosts(params: {
   category?: number;
   per_page?: number;
@@ -215,6 +328,8 @@ export async function getPosts(params: {
   tags?: number;
   offset?: number;
   includeContent?: boolean;
+  /** Slug de la categoría, para usar su feed RSS si la API REST no responde. */
+  categorySlug?: string;
 } = {}): Promise<WPPost[]> {
   const query = new URLSearchParams();
   if (params.category) query.append('categories', params.category.toString());
@@ -234,16 +349,30 @@ export async function getPosts(params: {
   query.append('_embed', '1');
   query.append('_fields', fields.join(','));
 
-  const cacheKey = `posts:${query.toString()}`;
+  const cacheKey = `posts:${params.categorySlug ?? ''}:${query.toString()}`;
 
   const posts = await cachedFetch(cacheKey, async () => {
     try {
+      // Sin ID de categoría (la API de categorías no respondió) solo sirve el feed de esa categoría.
+      if (params.categorySlug && !params.category) throw new Error(`Categoría ${params.categorySlug} sin ID`);
       const data = await fetchWPJson<WPPost[]>(`${BASE_URL}/posts?${query.toString()}`, siteConfig.api.revalidate);
       if (!Array.isArray(data)) throw new Error('La API de posts no devolvió una lista');
       return data;
     } catch (e) {
       console.error('[WP] Error fetching posts:', e);
-      throw e;
+      // Búsquedas y etiquetas no tienen feed equivalente; una categoría solo si conocemos su slug.
+      if (params.search || params.tags || (params.category && !params.categorySlug)) throw e;
+      const feedUrl = params.categorySlug
+        ? `${siteRootFromApi(BASE_URL)}/category/${params.categorySlug}/feed/`
+        : siteConfig.api.feedUrl;
+      const perPage = params.per_page || 10;
+      const offset = params.offset ?? ((params.page || 1) - 1) * perPage;
+      try {
+        return await getFeedPosts(feedUrl, perPage, offset);
+      } catch (feedError) {
+        console.error('[WP] Error fetching RSS fallback:', feedError);
+        throw e;
+      }
     }
   }, siteConfig.api.revalidate);
   return Array.isArray(posts) ? posts : [];
@@ -277,7 +406,14 @@ export async function getMontecristiPosts(params: {
       return data;
     } catch (e) {
       console.error('[WP] Error fetching Montecristi posts:', e);
-      throw e;
+      const perPage = params.per_page || 10;
+      const offset = params.offset ?? ((params.page || 1) - 1) * perPage;
+      try {
+        return await getFeedPosts(siteConfig.api.montecristiFeedUrl, perPage, offset);
+      } catch (feedError) {
+        console.error('[WP] Error fetching Montecristi RSS fallback:', feedError);
+        throw e;
+      }
     }
   }, siteConfig.api.revalidate);
   return Array.isArray(posts) ? posts : [];
@@ -325,8 +461,20 @@ export async function lookupPostBySlug(slug: string): Promise<{ post: WPPost | n
       }
     }
 
-    // Sin respuesta de ninguna fuente: lanzamos para no cachear un falso "no existe".
-    if (!anySourceAnswered) throw new Error(`WordPress no respondió para el slug ${cleanSlug}`);
+    // Sin respuesta de la API: buscamos el artículo en los feeds RSS recientes.
+    if (!anySourceAnswered) {
+      const wanted = decodeURIComponent(cleanSlug);
+      for (const feedUrl of [siteConfig.api.feedUrl, siteConfig.api.montecristiFeedUrl]) {
+        try {
+          const found = (await getFeedPosts(feedUrl, 30)).find((p) => p.slug === wanted || String(p.id) === wanted);
+          if (found) return { post: found };
+        } catch (e) {
+          console.error(`[WP] Error buscando el slug en el feed ${feedUrl}:`, e);
+        }
+      }
+      // Lanzamos para no cachear un falso "no existe".
+      throw new Error(`WordPress no respondió para el slug ${cleanSlug}`);
+    }
     return { post: null };
   }, revalidate);
 }

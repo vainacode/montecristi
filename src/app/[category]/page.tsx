@@ -200,8 +200,9 @@ async function CategoryContent({ slug }: { slug: string }) {
   let categoryPosts: WPPost[] = [];
   if (slug === 'montecristi') {
     categoryPosts = await getMontecristiPosts({ per_page: 19 }).catch(() => []);
-  } else if (category) {
-    categoryPosts = await getPosts({ category: category.id, per_page: 19 }).catch(() => []);
+  } else if (category || categories.length === 0) {
+    // Si la API de categorías no respondió, getPosts usa el feed RSS de la categoría por su slug.
+    categoryPosts = await getPosts({ category: category?.id, categorySlug: slug, per_page: 19 }).catch(() => []);
   }
 
   const heroPost = categoryPosts[0];

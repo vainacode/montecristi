@@ -66,8 +66,8 @@ export const siteConfig = {
 
   // ---- WordPress API & Feed ----------------------------------------------------------------------------------------------------------------------
   api: {
-    wordpressUrl: "https://noticiariord.net/wp-json/wp/v2",
-    feedUrl: "https://noticiariord.net/feed/",
+    wordpressUrl: "https://deultimominuto.com/wp-json/wp/v2",
+    feedUrl: "https://deultimominuto.com/feed/",
     montecristiUrl: "https://www.santosvasquezinforma.com/wp-json/wp/v2",
     montecristiFeedUrl: "https://www.santosvasquezinforma.com/category/montecristi/feed/",
     montecristiCategoryId: 6,
