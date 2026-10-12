@@ -43,43 +43,44 @@ export function MontecristiSpotlight({ posts }: MontecristiSpotlightProps) {
   return (
     <section className="container mx-auto px-4 my-14">
       {/* ── 1. BANNER PRINCIPAL CON EL LOGO OFICIAL DEL RELOJ EN GRANDE ── */}
-      <div className="relative mx-auto max-w-5xl rounded-3xl overflow-visible bg-gradient-to-r from-[#042564] via-[#021437] to-[#8A1017] border border-gray-200/20 shadow-[0_20px_50px_rgba(4,37,100,0.18)] mb-8">
-        <div className="grid grid-cols-[minmax(0,1fr)_96px] sm:grid-cols-[minmax(0,1fr)_140px] lg:grid-cols-12 gap-3 sm:gap-5 items-center px-4 py-4 sm:px-6 sm:py-5 md:px-10 lg:py-6">
+      <div className="relative mx-auto w-full max-w-7xl overflow-hidden rounded-2xl border border-[#17366f] bg-gradient-to-r from-[#031934] via-[#042564] to-[#071a3c] shadow-[0_12px_32px_rgba(4,37,100,0.2)] mb-8">
+        <div className="absolute inset-y-0 left-0 w-1.5 bg-[#BF1B23]" />
+        <div className="grid grid-cols-[minmax(0,1fr)_76px] sm:grid-cols-[minmax(0,1fr)_120px] lg:grid-cols-[minmax(0,1fr)_156px] gap-3 sm:gap-6 items-center px-4 py-4 sm:px-7 sm:py-5 lg:px-10 lg:py-6">
           
           {/* Columna Izquierda: Información y Botón */}
-          <div className="min-w-0 lg:col-span-7 space-y-2 sm:space-y-3">
-            <div className="inline-flex max-w-full items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 rounded-full bg-black/40 border border-[#BF1B23]/40 text-[#ff4d55] text-[8px] sm:text-[10px] font-black uppercase tracking-[0.12em] sm:tracking-[0.25em] shadow-inner">
-              <Radio size={11} className="shrink-0 text-[#ff4d55] animate-pulse" />
-              <span>COBERTURA EXCLUSIVA · LÍNEA NOROESTE</span>
+          <div className="min-w-0 space-y-2 sm:space-y-2.5">
+            <div className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.14em] text-blue-100 sm:gap-2 sm:px-3 sm:text-[9px] sm:tracking-[0.2em]">
+              <Radio size={11} className="shrink-0 text-[#ff6269]" />
+              <span>COBERTURA LOCAL · MONTECRISTI</span>
             </div>
 
-            <div className="space-y-1">
-              <h2 className="text-[1.2rem] sm:text-3xl md:text-5xl lg:text-6xl font-black font-serif text-white tracking-tight uppercase leading-[1.02]">
+            <div>
+              <h2 className="text-[1.35rem] font-black font-serif uppercase leading-[1.02] tracking-tight text-white sm:text-3xl md:text-4xl lg:text-5xl">
                 NOTICIAS DE <span className="text-[#ff4d55]">MONTECRISTI</span>
               </h2>
-              <p className="line-clamp-2 text-[8px] sm:text-[10px] md:text-xs font-bold uppercase tracking-[0.08em] sm:tracking-[0.2em] lg:tracking-[0.3em] text-blue-200/70">
+              <p className="mt-1 line-clamp-1 text-[8px] font-bold uppercase tracking-[0.08em] text-blue-100/70 sm:text-[10px] sm:tracking-[0.18em]">
                 SAN FERNANDO · GUAYUBÍN · VILLA VÁSQUEZ · CASTAÑUELAS · MANZANILLO
               </p>
             </div>
 
-            <p className="line-clamp-2 text-gray-200 text-[11px] sm:text-sm md:text-base leading-snug sm:leading-relaxed max-w-xl font-sans">
-              Cobertura directa, veraz y al minuto de los principales acontecimientos, sucesos, turismo, cultura y desarrollo de la provincia Montecristi en tiempo real.
+            <p className="line-clamp-2 max-w-3xl font-sans text-[11px] leading-snug text-white/80 sm:text-sm sm:leading-relaxed">
+              Noticias, comunidades y actualidad de Montecristi y la Línea Noroeste.
             </p>
 
-            <div className="pt-0.5 sm:pt-1">
+            <div className="pt-0.5">
               <Link
                 href="/montecristi"
-                className="inline-flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-[#BF1B23] to-[#8A1017] hover:from-[#d92b34] hover:to-[#a3131b] text-white font-black px-4 py-2.5 sm:px-6 sm:py-3 rounded-lg sm:rounded-xl shadow-[0_10px_25px_rgba(191,27,35,0.4)] hover:shadow-[0_15px_35px_rgba(191,27,35,0.6)] hover:-translate-y-0.5 active:scale-95 transition-all text-[9px] sm:text-[10px] uppercase tracking-[0.12em] sm:tracking-[0.2em]"
+                className="inline-flex items-center gap-2 rounded-md bg-[#BF1B23] px-3.5 py-2 text-[9px] font-black uppercase tracking-[0.12em] text-white transition-colors hover:bg-[#d92b34] sm:rounded-lg sm:px-4 sm:py-2.5 sm:text-[10px] sm:tracking-[0.16em]"
               >
                 <span>VER MÁS NOTICIAS</span>
-                <ArrowRight size={14} />
+                <ArrowRight size={13} />
               </Link>
             </div>
           </div>
 
           {/* Columna Derecha: El Logo Oficial del Reloj de Montecristi en Grande */}
-          <div className="lg:col-span-5 flex justify-end relative">
-            <div className="relative w-[88px] h-[88px] sm:w-[128px] sm:h-[128px] lg:w-[210px] lg:h-[210px] drop-shadow-[0_18px_25px_rgba(0,0,0,0.6)] filter transition-transform duration-700 hover:scale-105 flex items-center justify-center p-1 sm:p-2 lg:p-4">
+          <div className="relative flex justify-end">
+            <div className="relative h-[72px] w-[48px] sm:h-[112px] sm:w-[74px] lg:h-[148px] lg:w-[98px]">
               <Image
                 src="/logo.svg"
                 alt="Montecristi.net"
