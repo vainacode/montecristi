@@ -65,8 +65,8 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   );
 
   const canonicalUrl = `${siteConfig.url}/${getCategorySlug(post)}/${post.slug}`;
-  const keywords = post._embedded?.['wp:term']?.[1]?.map((t) => t.name).join(', ') || siteConfig.seo.keywords.join(', ');
   const categoryNames = getCategoryNames(post);
+  const keywords = post._embedded?.['wp:term']?.[1]?.map((term) => term.name).filter(Boolean) ?? siteConfig.seo.keywords;
 
   return {
     title,
