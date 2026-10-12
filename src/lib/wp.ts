@@ -105,6 +105,7 @@ function slugify(text: string): string {
 export interface WPPost {
   id: number;
   date: string;
+  modified?: string;
   slug: string;
   title: {
     rendered: string;
@@ -190,7 +191,7 @@ export async function getPosts(params: {
   // Las listas solo necesitan título, imagen y categorías. Evitamos enviar el
   // contenido completo de cada artículo y el resto del payload de WordPress.
   const fields = [
-    'id', 'date', 'slug', 'title', 'excerpt', 'featured_media',
+    'id', 'date', 'modified', 'slug', 'title', 'excerpt', 'featured_media',
     'featured_media_url', 'jetpack_featured_media_url', 'dum_api',
     'categories', '_links', '_embedded', 'yoast_head_json', 'rank_math_head_json',
   ];
@@ -219,15 +220,16 @@ export async function getMontecristiPosts(params: {
   per_page?: number;
   page?: number;
   offset?: number;
+  category?: number;
 } = {}): Promise<WPPost[]> {
   const query = new URLSearchParams();
-  query.append('categories', (siteConfig.api.montecristiCategoryId || 6).toString());
+  query.append('categories', (params.category || siteConfig.api.montecristiCategoryId || 6).toString());
   if (params.per_page) query.append('per_page', params.per_page.toString());
   if (params.page) query.append('page', params.page.toString());
   if (params.offset) query.append('offset', params.offset.toString());
   query.append('_embed', '1');
   const fields = [
-    'id', 'date', 'slug', 'title', 'excerpt', 'featured_media',
+    'id', 'date', 'modified', 'slug', 'title', 'excerpt', 'featured_media',
     'featured_media_url', 'jetpack_featured_media_url', 'dum_api',
     'categories', '_links', '_embedded', 'yoast_head_json', 'rank_math_head_json',
   ];
@@ -313,6 +315,26 @@ export async function getCategories(): Promise<WPCategory[]> {
       return await res.json();
     } catch (e) {
       console.error('[WP] Error fetching categories:', e);
+      return [];
+    }
+  }, 86400);
+}
+
+export async function getMontecristiCategories(): Promise<WPCategory[]> {
+  const cacheKey = 'categories:montecristi';
+  const montecristiBase = siteConfig.api.montecristiUrl || "https://www.santosvasquezinforma.com/wp-json/wp/v2";
+
+  return cachedFetch(cacheKey, async () => {
+    try {
+      const res = await fetchWithTimeout(`${montecristiBase}/categories?per_page=100&_fields=id,name,slug,count`, {
+        next: { revalidate: 86400 },
+      });
+
+      if (!res.ok) return [];
+      const categories = await res.json();
+      return Array.isArray(categories) ? categories : [];
+    } catch (e) {
+      console.error('[WP] Error fetching Montecristi categories:', e);
       return [];
     }
   }, 86400);

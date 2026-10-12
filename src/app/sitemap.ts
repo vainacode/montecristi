@@ -1,101 +1,103 @@
-import { MetadataRoute } from 'next';
-import { getCategories, getPosts, getCategorySlug, WPPost } from '@/lib/wp';
+import type { MetadataRoute } from 'next';
+import { getCategories, getMontecristiCategories, getPosts, getMontecristiPosts, getCategorySlug, getFeaturedImage, type WPPost } from '@/lib/wp';
 import { siteConfig } from '@/config/site';
+import { montecristiGuides } from '@/data/montecristiPorDentro';
 
-export const revalidate = 900; // Regenera el sitemap cada 15 minutos para indexación rápida
+// Refresh the sitemap hourly while keeping newly published pages discoverable quickly.
+export const revalidate = 3600;
 
-/** Obtiene TODOS los artículos paginando de 100 en 100 hasta agotar resultados */
-async function getAllPosts(): Promise<WPPost[]> {
-  const all: WPPost[] = [];
-  try {
-    for (let page = 1; page <= 5; page++) {
-      const batch = await getPosts({ per_page: 100, page });
-      if (!batch || !batch.length) break;
-      all.push(...batch);
-      if (batch.length < 100) break;
-    }
-  } catch (e) {
-    console.error('[Sitemap] Failed to fetch posts:', e);
+const POSTS_PER_SITEMAP_SOURCE = 24_000;
+const POSTS_PER_PAGE = 100;
+
+async function getAllPosts(fetchPage: (page: number) => Promise<WPPost[]>): Promise<WPPost[]> {
+  const posts: WPPost[] = [];
+  const maxPages = Math.ceil(POSTS_PER_SITEMAP_SOURCE / POSTS_PER_PAGE);
+
+  for (let page = 1; page <= maxPages; page++) {
+    const batch = await fetchPage(page);
+    if (!batch.length) break;
+
+    posts.push(...batch);
+    if (batch.length < POSTS_PER_PAGE) break;
   }
-  return all;
+
+  return posts;
+}
+
+function toValidDate(value?: string): Date | undefined {
+  if (!value) return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = siteConfig.url || 'https://montecristi.net';
+  const baseUrl = siteConfig.url.replace(/\/$/, '');
+  const routes = new Map<string, MetadataRoute.Sitemap[number]>();
 
-  // 1. Rutas Estáticas Principales
-  const staticRoutes = siteConfig.nav.map((route) => ({
-    url: `${baseUrl}${route.href}`,
-    lastModified: new Date(),
-    changeFrequency: 'hourly' as const,
-    priority: route.href === '/' ? 1.0 : 0.85,
-  }));
-
-  // 2. Rutas Legales
-  const legalRoutes = [
+  // Only include public, indexable pages. Omit lastModified where the page has no reliable date.
+  const staticPaths = [
+    '/',
+    '/montecristi-por-dentro',
+    '/conoce-montecristi',
+    '/conocenos',
+    '/politica-editorial',
+    '/contacto',
+    '/en-vivo',
+    '/edicion-impresa',
+    '/combustibles',
+    '/galerias',
     '/aviso-legal',
     '/politica-de-privacidad',
     '/politica-de-cookies',
     '/terminos',
     '/mapa-del-sitio',
-  ].map((route) => ({
-    url: `${baseUrl}${route}`,
-    lastModified: new Date(),
-    changeFrequency: 'monthly' as const,
-    priority: 0.4,
-  }));
+    ...montecristiGuides.map(({ slug }) => `/montecristi-por-dentro/${slug}`),
+  ];
+
+  for (const path of staticPaths) {
+    const url = new URL(path, `${baseUrl}/`).toString();
+    routes.set(url, { url });
+  }
 
   try {
-    // 3. Categorías Dinámicas
-    const categories = await getCategories();
-    const categoryRoutes = categories.map((cat) => ({
-      url: `${baseUrl}/${cat.slug}`,
-      lastModified: new Date(),
-      changeFrequency: 'hourly' as const,
-      priority: 0.85,
-    }));
+    const [categories, montecristiCategories, primaryPosts, montecristiPosts] = await Promise.all([
+      getCategories(),
+      getMontecristiCategories(),
+      getAllPosts((page) => getPosts({ per_page: POSTS_PER_PAGE, page })),
+      getAllPosts((page) => getMontecristiPosts({ per_page: POSTS_PER_PAGE, page })),
+    ]);
 
-    // 4. Todos los artículos con priorización de frescura (News SEO)
-    const allPosts = await getAllPosts();
-    const now = Date.now();
-    const postRoutes = allPosts.map((post) => {
-      const postTime = new Date(post.date).getTime();
-      const ageHours = (now - postTime) / (1000 * 60 * 60);
-      const isFresh = ageHours <= 48;
+    // The dynamic category route supports configured editorial sections with published content.
+    for (const category of [...categories, ...montecristiCategories]) {
+      if (category.count <= 0 || !(category.slug in siteConfig.categoryConfig)) continue;
+      const url = new URL(`/${category.slug}`, `${baseUrl}/`).toString();
+      routes.set(url, { url });
+    }
 
-      return {
-        url: `${baseUrl}/${getCategorySlug(post)}/${post.slug}`,
-        lastModified: new Date(post.date),
-        changeFrequency: isFresh ? ('hourly' as const) : ('monthly' as const),
-        priority: isFresh ? 0.95 : 0.7,
-      };
-    });
+    // The article resolver checks the primary feed first by slug. Use the same
+    // precedence here so sitemap URLs never point to a secondary copy that
+    // permanently redirects to the primary article's canonical category.
+    const seenSlugs = new Set<string>();
+    for (const post of [...primaryPosts, ...montecristiPosts]) {
+      if (!post.slug) continue;
+      if (seenSlugs.has(post.slug)) continue;
+      seenSlugs.add(post.slug);
 
-    console.log(`[Sitemap] ${allPosts.length} artículos indexados en el sitemap.`);
+      const categorySlug = getCategorySlug(post);
+      const url = new URL(`/${categorySlug}/${post.slug}`, `${baseUrl}/`).toString();
+      const lastModified = toValidDate(post.modified) ?? toValidDate(post.date);
+      const image = getFeaturedImage(post);
+      routes.set(url, {
+        url,
+        ...(lastModified ? { lastModified } : {}),
+        ...(image ? { images: [image] } : {}),
+      });
+    }
 
-    return [
-      {
-        url: baseUrl,
-        lastModified: new Date(),
-        changeFrequency: 'always' as const,
-        priority: 1,
-      },
-      ...staticRoutes,
-      ...legalRoutes,
-      ...categoryRoutes,
-      ...postRoutes,
-    ];
-  } catch (e) {
-    console.error('[Sitemap] Error generando rutas dinámicas:', e);
-    return [
-      {
-        url: baseUrl,
-        lastModified: new Date(),
-        changeFrequency: 'always' as const,
-        priority: 1,
-      },
-      ...staticRoutes,
-      ...legalRoutes,
-    ];
+    console.info(`[Sitemap] Generated ${routes.size} unique public URLs (${primaryPosts.length + montecristiPosts.length} source entries).`);
+  } catch (error) {
+    console.error('[Sitemap] Failed to load dynamic URLs:', error);
   }
+
+  return Array.from(routes.values());
 }

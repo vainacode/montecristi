@@ -26,7 +26,7 @@ export default function PoliticaPrivacidadPage() {
           <p>Utilizamos la información recopilada para proporcionarle las noticias más relevantes de la región, responder a sus solicitudes, y enviarle comunicaciones de marketing si ha optado por recibirlas. También analizamos el tráfico de nuestro sitio para mejorar la experiencia del usuario.</p>
 
           <h2>3. Compartir Información</h2>
-          <p>No vendemos ni alquilamos su información personal a terceros. Podemos compartir información con proveedores de servicios que nos asisten en las operaciones del sitio web (como Google Analytics o proveedores de publicidad como Google AdSense), siempre bajo estrictos acuerdos de confidencialidad.</p>
+          <p>No vendemos ni alquilamos la información personal que recibimos directamente de los usuarios. El sitio utiliza Google Analytics para medir el tráfico y carga Google AdSense para mostrar anuncios. Google y otros proveedores publicitarios pueden recibir datos del navegador o del dispositivo, como la dirección IP, identificadores y actividad relacionada con los anuncios, y utilizar cookies o tecnologías similares conforme a sus propias políticas. Consulte la <a href="https://policies.google.com/privacy?hl=es">Política de privacidad de Google</a> y gestione la personalización en <a href="https://adssettings.google.com/">Configuración de anuncios de Google</a>.</p>
 
           <h2>4. Seguridad de los Datos</h2>
           <p>Implementamos medidas de seguridad para proteger sus datos personales contra acceso no autorizado, alteración, divulgación o destrucción. Sin embargo, ninguna transmisión por Internet es completamente segura, por lo que no podemos garantizar seguridad absoluta.</p>

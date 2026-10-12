@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPosts } from "@/lib/wp";
+import { getMontecristiPosts, getPosts } from "@/lib/wp";
 import { sanitizeInput } from "@/lib/security";
 
 export const revalidate = 60;
@@ -10,13 +10,13 @@ export async function GET(req: NextRequest) {
   const per_page = parseInt(sanitizeInput(searchParams.get("per_page") ?? "18"), 10) || 18;
   const categoryRaw = sanitizeInput(searchParams.get("category") ?? "");
   const category = categoryRaw ? parseInt(categoryRaw, 10) : undefined;
+  const source = searchParams.get("source") === "montecristi" ? "montecristi" : "primary";
 
   try {
-    const posts = await getPosts({
-      offset,
-      per_page,
-      category: isNaN(category as any) ? undefined : category,
-    });
+    const validCategory = Number.isNaN(category) ? undefined : category;
+    const posts = source === "montecristi"
+      ? await getMontecristiPosts({ offset, per_page, category: validCategory })
+      : await getPosts({ offset, per_page, category: validCategory });
 
     return NextResponse.json(posts, {
       headers: {

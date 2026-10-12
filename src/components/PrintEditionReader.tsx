@@ -30,7 +30,7 @@ interface PrintEditionProps {
  * Limpia y purifica el texto para versión 100% IMPRESA:
  * - Elimina tags HTML, scripts, iframes y enlaces web.
  * - Elimina coletillas ("leer más", "sigue leyendo", "P. 3", etc.).
- * - Sanitiza créditos de marcas ajenas a "Redacción Montecristi".
+ * - Conserva las menciones de fuentes y sus créditos editoriales.
  * - Entrega párrafos sólidos para maquetación en columnas periodísticas.
  */
 function getPrintParagraphs(htmlStr: string): string[] {
@@ -42,8 +42,6 @@ function getPrintParagraphs(htmlStr: string): string[] {
     .replace(/<img[^>]*>/gi, '')
     .replace(/<a\b[^>]*>(.*?)<\/a>/gi, '$1')
     .replace(/\((?:sigue leyendo|leer m[aá]s|read more|ver m[aá]s|clic aqu[ií]|foto:[^)]+|P\.\s*\d+)\s*…?\)/gi, '')
-    .replace(/(?:Diario al D[ií]a|Noticiario RD|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa)\s*\|\s*/gi, 'Redacción Montecristi | ')
-    .replace(/(?:Diario al D[ií]a|Noticiario RD|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa)\s*[-–—]\s*/gi, 'Redacción Montecristi — ')
     .replace(/(?:<br\s*\/?>\s*)+/gi, '</p><p>');
 
   const raw = clean

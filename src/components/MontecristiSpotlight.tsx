@@ -60,7 +60,7 @@ export function MontecristiSpotlight({ posts }: MontecristiSpotlightProps) {
   return (
     <section className="container mx-auto px-4 my-14">
       {/* ── 1. BANNER PRINCIPAL CON EL LOGO OFICIAL DEL RELOJ EN GRANDE ── */}
-      <div className="relative rounded-3xl overflow-visible bg-gradient-to-r from-[#042564] via-[#021437] to-[#8A1017] border border-gray-200/20 shadow-[0_20px_50px_rgba(4,37,100,0.18)] mb-8">
+      <div className="relative mx-auto max-w-5xl rounded-3xl overflow-visible bg-gradient-to-r from-[#042564] via-[#021437] to-[#8A1017] border border-gray-200/20 shadow-[0_20px_50px_rgba(4,37,100,0.18)] mb-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center px-6 py-8 md:px-12 md:py-10">
           
           {/* Columna Izquierda: Información y Botón */}

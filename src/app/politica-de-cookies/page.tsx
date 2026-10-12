@@ -27,11 +27,11 @@ export default function PoliticaCookiesPage() {
           <ul>
             <li><strong>Cookies técnicas:</strong> Son aquellas necesarias para la navegación y el buen funcionamiento de la página web (ej. control del tráfico de datos o compartir contenidos en redes sociales).</li>
             <li><strong>Cookies de análisis:</strong> Tratadas por nosotros o por terceros (como Google Analytics), nos permiten cuantificar el número de usuarios para realizar medición y análisis estadístico.</li>
-            <li><strong>Cookies publicitarias:</strong> Al integrar Google AdSense, estas cookies permiten la gestión eficaz de los espacios publicitarios, personalizando los anuncios para que sean relevantes para el usuario.</li>
+            <li><strong>Cookies publicitarias:</strong> Google AdSense y sus socios pueden utilizar cookies o identificadores para mostrar y medir anuncios, limitar su repetición y, cuando corresponda, personalizarlos según visitas anteriores. La publicidad puede no estar personalizada según la ubicación o configuración del usuario.</li>
           </ul>
 
           <h2>3. Desactivación o eliminación de cookies</h2>
-          <p>En cualquier momento, usted podrá ejercer su derecho de desactivación o eliminación de cookies de este sitio web. Las acciones dependen principalmente del navegador web que esté utilizando. En las opciones de su navegador (Chrome, Firefox, Safari, Edge) puede configurar la privacidad y el manejo de estos ficheros.</p>
+          <p>Puede borrar o bloquear cookies desde la configuración de su navegador. También puede administrar la personalización de anuncios desde <a href="https://adssettings.google.com/">Configuración de anuncios de Google</a>. Al bloquear cookies, algunas funciones o mediciones podrían no operar igual.</p>
 
           <h2>4. Notas adicionales</h2>
           <p>Ni este portal web ni sus representantes legales se hacen responsables del contenido ni de la veracidad de las políticas de privacidad que puedan tener los terceros (como Google) mencionados en esta política de cookies.</p>

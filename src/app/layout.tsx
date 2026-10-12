@@ -54,7 +54,6 @@ export const metadata: Metadata = {
     template: `%s | Montecristi.net`,
   },
   description: siteConfig.seo.description,
-  keywords: siteConfig.seo.keywords,
   authors: [{ name: "Redacción Montecristi", url: siteConfig.url }],
   creator: siteConfig.name,
   publisher: siteConfig.name,
@@ -110,20 +109,8 @@ export const metadata: Metadata = {
     ],
   },
 
-  // -- Icons ----------------------------------------------------------------─
-  icons: {
-    icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/logo.svg", type: "image/svg+xml" },
-      { url: "/icono.png", sizes: "32x32", type: "image/png" },
-      { url: "/favicon.ico", sizes: "any" }
-    ],
-    apple: [
-      { url: "/logo.svg", type: "image/svg+xml" },
-      { url: "/icono.png", sizes: "180x180", type: "image/png" }
-    ],
-    shortcut: "/favicon.svg",
-  },
+  // Icons are generated from src/app/favicon.ico and src/app/apple-icon.png.
+  // Keeping them in the App Router file convention avoids competing metadata icons.
   facebook: {
     appId: siteConfig.seo.facebookAppId,
   },
@@ -144,13 +131,6 @@ export default async function RootLayout({
         "@type": "NewsMediaOrganization",
         "@id": `${siteConfig.url}/#organization`,
         "name": siteConfig.name,
-        "alternateName": [
-          "El Periódico Digital de Montecristi",
-          "Periódico Montecristi",
-          "Periódico Digital de Montecristi",
-          "Diario Digital Montecristi",
-          "Montecristi News"
-        ],
         "url": siteConfig.url,
         "logo": {
           "@type": "ImageObject",
@@ -160,10 +140,9 @@ export default async function RootLayout({
         },
         "description": siteConfig.description,
         "foundingDate": siteConfig.founded,
-        "publishingPrinciples": `${siteConfig.url}/aviso-legal`,
-        "correctionsPolicy": `${siteConfig.url}/conocenos`,
-        "ethicsPolicy": `${siteConfig.url}/conocenos`,
-        "diversityPolicy": `${siteConfig.url}/conocenos`,
+        "publishingPrinciples": `${siteConfig.url}/politica-editorial`,
+        "correctionsPolicy": `${siteConfig.url}/politica-editorial`,
+        "ethicsPolicy": `${siteConfig.url}/politica-editorial`,
         "address": {
           "@type": "PostalAddress",
           "addressLocality": "Montecristi",
@@ -207,7 +186,7 @@ export default async function RootLayout({
         "inLanguage": "es-DO",
         "potentialAction": {
           "@type": "SearchAction",
-          "target": `${siteConfig.url}/?s={search_term_string}`,
+          "target": `${siteConfig.url}/buscar?q={search_term_string}`,
           "query-input": "required name=search_term_string"
         }
       }

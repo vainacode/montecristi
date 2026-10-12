@@ -64,7 +64,7 @@ async function HomeContent() {
   return (
     <div className="bg-zinc-50 min-h-screen">
       <div className="pt-0 pb-12">
-        <h1 className="sr-only">Montecristi Noticias — El Periódico de Montecristi Digital | Noticias de Montecristi Hoy y República Dominicana</h1>
+        <h1 className="sr-only">Noticias de Montecristi y la Línea Noroeste</h1>
 
         {/* Ad: Top Leaderboard */}
         <div className="container mx-auto px-4 pt-3 md:pt-0 mb-8 flex justify-center">

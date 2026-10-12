@@ -11,6 +11,8 @@ interface LoadMoreFeedProps {
   initialOffset: number;
   /** Optional: restrict to a category ID */
   categoryId?: number;
+  /** Feed used by the category when it comes from the dedicated Montecristi source. */
+  categorySource?: 'montecristi';
   /** Posts per page for each "load more" request */
   perPage?: number;
 }
@@ -19,6 +21,7 @@ export function LoadMoreFeed({
   initialPosts,
   initialOffset,
   categoryId,
+  categorySource,
   perPage = 18,
 }: LoadMoreFeedProps) {
   const [posts, setPosts] = useState<WPPost[]>(initialPosts);
@@ -36,6 +39,7 @@ export function LoadMoreFeed({
         per_page: String(perPage),
       });
       if (categoryId) params.set('category', String(categoryId));
+      if (categorySource) params.set('source', categorySource);
 
       const res = await fetch(`/api/posts?${params.toString()}`);
       if (!res.ok) {

@@ -11,31 +11,31 @@ const PORTADA = {
   // Anuncio en la parte superior (Top Leaderboard)
   topLeaderboard: { visible: true },
   // Anuncio grande debajo del bloque de noticias principales — tamaño 970×90 px
-  bannerHorizontal: { visible: true },
+  bannerHorizontal: { visible: false },
   // --- Barra Lateral junto al Hero (Arriba) ---
-  sidebarHeroRect1: { visible: true },
-  sidebarHeroRect2: { visible: true },
+  sidebarHeroRect1: { visible: false },
+  sidebarHeroRect2: { visible: false },
   // --- Barra Lateral junto al Feed (Abajo) ---
-  sidebarFeedRect: { visible: true },
-  sidebarFeedVert: { visible: true },
+  sidebarFeedRect: { visible: false },
+  sidebarFeedVert: { visible: false },
 };
 
 const CATEGORIA = {
   // Anuncio debajo del banner de la categoría — tamaño 970×90 px
   bannerHorizontal: { visible: true },
   // Anuncio cuadrado en la barra lateral — tamaño 300×250 px
-  bannerSidebar300x250: { visible: true },
+  bannerSidebar300x250: { visible: false },
   // Anuncio vertical en la barra lateral — tamaño 300×600 px
-  bannerSidebar300x600: { visible: true },
+  bannerSidebar300x600: { visible: false },
 };
 
 const ARTICULO = {
   // Anuncio que aparece dentro del texto, después del 2do párrafo — tamaño 970×90 px
-  bannerEnContenido: { visible: true },
+  bannerEnContenido: { visible: false },
   // Anuncio cuadrado en la barra lateral — tamaño 300×250 px
   bannerSidebar300x250: { visible: true },
   // Anuncio vertical en la barra lateral — tamaño 300×600 px
-  bannerSidebar300x600: { visible: true },
+  bannerSidebar300x600: { visible: false },
 };
 
 

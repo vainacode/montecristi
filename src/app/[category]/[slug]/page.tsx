@@ -13,12 +13,21 @@ import { adsConfig } from "@/config/ads";
 import Image from "next/image";
 import Link from "next/link";
 import { Calendar, Send } from "lucide-react";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { Metadata } from 'next';
-import { ApiFallbackScreen } from "@/components/ApiFallbackScreen";
 
 interface ArticlePageProps {
   params: Promise<{ category: string, slug: string }>;
+}
+
+function absoluteHttpUrl(value?: string): string | undefined {
+  if (!value) return undefined;
+  try {
+    const url = new URL(value, siteConfig.url);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
@@ -35,32 +44,35 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
 
   // La og:image SIEMPRE debe ser una URL absoluta accesible por los crawlers de Google/Facebook.
   // Prioridad: Rank Math → Yoast → imagen destacada del post → imagen por defecto del sitio.
-  const ogImageUrl =
+  const ogImageUrl = absoluteHttpUrl(
     rm?.og_image?.[0]?.url ||
     yoast?.og_image?.[0]?.url ||
     rawImage ||
-    siteDefault;
+    siteDefault,
+  ) || siteDefault;
 
-  const twitterImageUrl =
+  const twitterImageUrl = absoluteHttpUrl(
     rm?.twitter_image ||
     yoast?.twitter_image ||
     rawImage ||
-    siteDefault;
+    siteDefault,
+  ) || siteDefault;
 
-  const title = rm?.title || yoast?.title || post.title.rendered.replace(/<[^>]*>/g, '');
+  const rawTitle = rm?.title || yoast?.title || post.title.rendered.replace(/<[^>]*>/g, '');
+  const title = rawTitle
+    .replace(/\s*[|–—-]\s*Montecristi\.net\s*$/i, '')
+    .trim();
   const description =
     rm?.description ||
     yoast?.og_description ||
     post.excerpt.rendered.replace(/<[^>]*>/g, '').slice(0, 160);
 
   const canonicalUrl = `${siteConfig.url}/${getCategorySlug(post)}/${post.slug}`;
-  const keywords = post._embedded?.['wp:term']?.[1]?.map((t: any) => t.name).join(', ') || siteConfig.seo.keywords.join(', ');
   const categoryNames = getCategoryNames(post);
 
   return {
     title,
     description,
-    keywords,
     robots: {
       index: true,
       follow: true,
@@ -82,14 +94,11 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       images: [
         {
           url: ogImageUrl,
-          width: 1200,
-          height: 675,
           alt: title,
-          type: "image/jpeg",
         },
       ],
       publishedTime: new Date(post.date).toISOString(),
-      modifiedTime: new Date(post.date).toISOString(),
+      modifiedTime: new Date(post.modified || post.date).toISOString(),
       authors: ["Redacción Montecristi"],
       section: categoryNames[0] || "Noticias",
     },
@@ -108,19 +117,18 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   };
 }
 
-// Lista de dominios de feeds/fuentes a convertir en enlaces internos propios
+// Source domains stay external so publisher links and attribution remain visible.
 const SOURCE_DOMAINS = [
   'noticiariord.net',
   'santosvasquezinforma.com',
-  'www.santosvasquezinforma.com',
   'diarioaldia.com',
   'relojinformativo.do',
   'morroinformativo.com',
   'deultimominuto.net',
-  'remolacha.net'
+  'remolacha.net',
 ];
 
-// Utility to clean and format content, convert links and sanitize brands
+// Format syndicated content while preserving original publisher credits and links.
 function formatContent(content: string, currentCategory = 'noticias') {
   let processed = content;
 
@@ -130,20 +138,6 @@ function formatContent(content: string, currentCategory = 'noticias') {
     .replace(/<script\b[^>]*>(?:(?!<\/script>)[\s\S])*?(?:adsbygoogle|taboola|outbrain|mgid|propeller|monetag)[\s\S]*?<\/script>/gi, '')
     .replace(/<div\b[^>]*class="[^"]*(?:ad-slot|ad-unit|ad_banner|wp-block-ad|anuncio|publicidad|adsbygoogle|banner-ad|ad-wrapper|code-block|advertisement)[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
     .replace(/<!--[\s\S]*?-->/g, ''); // comentarios de WordPress
-
-  // 2. ---- SANITIZACIÓN DE MARCA Y FUENTES EXTERNAS (100% Montecristi.net) ----
-  processed = processed
-    // Encabezados de agencia de noticias al inicio
-    .replace(/(?:Diario al D[ií]a|Noticiario RD|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa|Santos Vasquez|List[ií]n Diario|Diario Libre|El Caribe|El D[ií]a|Hoy Digital|CDN|SIN|Remolacha)\s*\|\s*/gi, '')
-    .replace(/(?:Diario al D[ií]a|Noticiario RD|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa|Santos Vasquez|List[ií]n Diario|Diario Libre|El Caribe|El D[ií]a|Hoy Digital|CDN|SIN|Remolacha)\s*[-–—]\s*/gi, '')
-    // Eliminar líneas de "Fuente:", "Tomado de:", "Vía:", "Créditos:"
-    .replace(/<p>\s*(?:Fuente|Tomado de|V[ií]a|Cr[eé]ditos|Foto|Redacci[oó]n|Autor)\s*:\s*[^<]*<\/p>/gi, '')
-    .replace(/\b(?:Fuente|Tomado de|V[ií]a|Cr[eé]ditos)\s*:\s*[^.\n<]+[.\n<]?/gi, '')
-    // Referencias a la publicación en el cuerpo del texto
-    .replace(/\b(?:para|en|por|según|informó|reportó|exclusiva de)\s+(?:Noticiario RD|Diario al D[ií]a|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa|Santos Vasquez)\b/gi, (match) => {
-      return match.replace(/(?:Noticiario RD|Diario al D[ií]a|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa|Santos Vasquez)/gi, siteConfig.name);
-    })
-    .replace(/\b(?:Noticiario RD|Diario al D[ií]a|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa|Santos Vasquez)\b/gi, siteConfig.name);
 
   // 3. ---- Convertir todos los <br> y saltos de línea de WordPress en párrafos reales ----
   processed = processed
@@ -180,7 +174,7 @@ function formatContent(content: string, currentCategory = 'noticias') {
         }
       }
 
-      if (isSourceDomain) {
+      if (isSourceDomain && cleanHref.startsWith('/') && !cleanHref.startsWith('//')) {
         // Convertir enlace a la ruta interna de montecristi.net
         const cleanPath = path.replace(/\/+/g, '/').replace(/^\/|\/$/g, '');
         let internalUrl = '/';
@@ -417,14 +411,19 @@ function formatContent(content: string, currentCategory = 'noticias') {
     })
     .replace(/data-wp-[^=\s]*="[^"]*"\s*/gi, '');
 
-  // 14. ---- Marca de Agua Invisible (Anti-Scraping) ------------------------------------------------------------
-  const watermark = `<div style="display:none;font-size:1px;color:transparent;opacity:0;">Este contenido pertenece a ${siteConfig.name} - ${siteConfig.url}. Prohibida su reproducción no autorizada.</div>`;
-  
-  return processed + watermark;
+  return processed;
 }
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
-  const { slug } = await params;
+  const { category, slug } = await params;
+  const post = await getPostBySlug(slug);
+  if (!post) notFound();
+
+  const canonicalCategory = getCategorySlug(post);
+  if (category !== canonicalCategory) {
+    permanentRedirect(`/${canonicalCategory}/${post.slug}`);
+  }
+
   return <ArticleContent slug={slug} />;
 }
 
@@ -432,13 +431,7 @@ async function ArticleContent({ slug }: { slug: string }) {
   // Ejecutamos las peticiones en paralelo para no bloquear secuencialmente
   const post = await getPostBySlug(slug);
 
-  if (!post) {
-    return (
-      <ApiFallbackScreen 
-        message="No se ha podido encontrar o sincronizar el artículo solicitado. Es posible que haya sido reubicado o que la conexión esté temporalmente interrumpida." 
-      />
-    );
-  }
+  if (!post) notFound();
 
   const categoryId = post.categories?.[0];
 
@@ -455,7 +448,7 @@ async function ArticleContent({ slug }: { slug: string }) {
   const imageUrl = getFeaturedImage(post);
   const categories = getCategoryNames(post);
   const catSlug = getCategorySlug(post);
-  const postTags = post._embedded?.['wp:term']?.[1] || [];
+  const postTags = post._embedded?.['wp:term']?.flat()?.filter((term: any) => term?.name) || [];
   const shareUrl = `${siteConfig.url}/${catSlug}/${slug}`;
   const shareTitle = post.title.rendered;
 
@@ -512,23 +505,17 @@ async function ArticleContent({ slug }: { slug: string }) {
         }),
         "headline": cleanHeadline,
         "description": cleanExcerpt,
-        "image": imageUrl ? [
-          imageUrl,
-          `${imageUrl}#16x9`,
-          `${imageUrl}#4x3`,
-          `${imageUrl}#1x1`
-        ] : [siteDefault],
+        "image": [absoluteHttpUrl(imageUrl) || siteDefault],
         "datePublished": new Date(post.date).toISOString(),
-        "dateModified": new Date(post.date).toISOString(),
+        "dateModified": new Date(post.modified || post.date).toISOString(),
         "inLanguage": "es-DO",
-        "isAccessibleForFree": "True",
+        "isAccessibleForFree": true,
         "articleSection": categories[0] || "Noticias",
         "keywords": postTags.map((t: any) => t.name).join(", "),
         "author": {
-          "@type": "Person",
+          "@type": "Organization",
           "name": "Redacción Montecristi",
           "url": `${siteConfig.url}/conocenos`,
-          "jobTitle": "Equipo Editorial"
         },
         "publisher": {
           "@type": "NewsMediaOrganization",
@@ -540,7 +527,7 @@ async function ArticleContent({ slug }: { slug: string }) {
             "width": "420",
             "height": "80"
           },
-          "publishingPrinciples": `${siteConfig.url}/aviso-legal`
+          "publishingPrinciples": `${siteConfig.url}/politica-editorial`
         },
         "speakable": {
           "@type": "SpeakableSpecification",
@@ -550,7 +537,7 @@ async function ArticleContent({ slug }: { slug: string }) {
           "@type": "WebPage",
           "@id": shareUrl
         },
-        "articleBody": post.content.rendered.replace(/<[^>]*>/g, '').slice(0, 3000)
+        "articleBody": formattedContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 5000)
       },
       {
         "@type": "BreadcrumbList",
@@ -646,7 +633,10 @@ async function ArticleContent({ slug }: { slug: string }) {
               <span className="w-px h-3 bg-gray-200" />
               <div className="flex items-center gap-2">
                 <Calendar size={14} className="text-brand-dark" />
-                <span>{new Date(post.date).toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              <span>Publicado {new Date(post.date).toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              {post.modified && new Date(post.modified).getTime() > new Date(post.date).getTime() && (
+                <span>Actualizado {new Date(post.modified).toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              )}
               </div>
             </div>
 

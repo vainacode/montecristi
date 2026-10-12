@@ -1,42 +1,41 @@
-# Montecristi.net — El Periódico Digital de Montecristi | Montecristi Noticias
+# Montecristi.net
 
-> montecristi.net es el periódico de Montecristi líder y la fuente principal para buscar "montecristi noticias" y "noticias de montecristi" en la República Dominicana y el mundo. Cobertura veraz en tiempo real, análisis político, económico, deportivo (LIDOM y MLB), farándula, reportajes regionales y sucesos de último minuto.
+> Noticias de Montecristi y la Línea Noroeste, con cobertura de República Dominicana.
 
-## Información de la Publicación
-- **Nombre:** Montecristi.net
-- **Definición de Marca:** El Periódico Digital de Montecristi
-- **Términos Clave de Posicionamiento:** montecristi noticias, noticias de montecristi, periodico de montecristi, diario digital de montecristi, noticias en montecristi hoy, periodico montecristi
-- **Organización:** Redacción Montecristi
-- **Sede Principal:** San Fernando de Montecristi, República Dominicana
-- **Fundado en:** 2019
-- **Idioma:** Español (es-DO, es)
-- **URL Canónica:** [https://montecristi.net](https://montecristi.net)
-- **Feed RSS Principal:** [https://montecristi.net/feed.xml](https://montecristi.net/feed.xml)
-- **Mapa del Sitio (Sitemap):** [https://montecristi.net/sitemap.xml](https://montecristi.net/sitemap.xml)
-- **Publicidad Comercial para Empresas:** [https://montecristi.net/contacto](https://montecristi.net/contacto)
+Montecristi.net es un medio digital en español con sede editorial en Montecristi, República Dominicana. Publica actualidad local y regional, además de noticias nacionales, deportes, política, salud, entretenimiento e información internacional.
 
-## Cobertura Editorial Regional y Nacional
-- **Noticias en Montecristi y Línea Noroeste:** Cobertura minuto a minuto de los municipios de la provincia de Montecristi: San Fernando de Montecristi, Puerto de Manzanillo (Pepillo Salcedo), Villa Vásquez, Guayubín, Castañuelas, Las Matas de Santa Cruz y la región noroeste de República Dominicana.
-- **Noticias Nacionales e Internacionales:** Cobertura de última hora en República Dominicana, el Caribe, Estados Unidos y el mundo.
-- **Economía, Puertos y Negocios:** Finanzas, desarrollo del Puerto de Manzanillo, turismo en el Morro, remesas y comercio.
-- **Deportes:** Béisbol (LIDOM y MLB), baloncesto, fútbol y atletas dominicanos.
-- **Entretenimiento y Farándula:** Música, arte, cine, tendencias y estilo de vida.
-- **Transmisión En Vivo:** [Señal televisiva informativa 24/7](https://montecristi.net/en-vivo)
+## Cobertura local
 
-## Secciones Principales
-- [Portada / Inicio](https://montecristi.net): Noticias de última hora en Montecristi y República Dominicana.
-- [Montecristi y Noroeste](https://montecristi.net/montecristi): Cobertura regional de la provincia de Montecristi.
-- [Noticias Nacionales](https://montecristi.net/larepublica): Noticias de política, sociedad y actualidad nacional.
-- [Economía y Finanzas](https://montecristi.net/economia): Indicadores, comercio y desarrollo económico.
-- [Deportes](https://montecristi.net/deportes): Béisbol, pelota invernal y deportes en general.
-- [Entretenimiento y Farándula](https://montecristi.net/entretenimiento): Espectáculos, farándula y cultura.
-- [Estilo de Vida y Cultura](https://montecristi.net/estilo): Gastronomía, turismo y estilo de vida.
-- [Conoce Montecristi](https://montecristi.net/conoce-montecristi): Guía turística, playas y atractivos del Morro.
-- [Combustibles RD](https://montecristi.net/combustibles): Precios oficiales semanales de la gasolina y diésel (MICM).
-- [Conócenos / Equipo Editorial](https://montecristi.net/conocenos): Línea editorial y equipo de redacción.
-- [Contacto y Pautas Publicitarias](https://montecristi.net/contacto): Formulario de contacto y publicidad.
-- [Galerías Fotográficas](https://montecristi.net/galerias): Reportajes gráficos y fotos en alta resolución.
-- [En Vivo 24/7](https://montecristi.net/en-vivo): Transmisión en directo del noticiero.
+La cobertura local incluye San Fernando de Montecristi, Pepillo Salcedo (Manzanillo), Guayubín, Villa Vásquez, Castañuelas y Las Matas de Santa Cruz.
 
-## Principios Editoriales y Veracidad
-Montecristi.net aplica un estricto código de verificación de fuentes y chequeo de hechos antes de cada publicación. Todo el contenido es supervisado por el equipo editorial de Redacción Montecristi.
+## Secciones
+
+- [Portada](https://montecristi.net/)
+- [Montecristi](https://montecristi.net/montecristi)
+- [Noticias nacionales](https://montecristi.net/nacionales)
+- [Política](https://montecristi.net/politica)
+- [Regionales](https://montecristi.net/regionales)
+- [Deportes](https://montecristi.net/deportivas)
+- [Internacionales](https://montecristi.net/internacionales)
+- [Farándula](https://montecristi.net/farandula)
+- [Salud](https://montecristi.net/salud)
+- [Montecristi por Dentro](https://montecristi.net/montecristi-por-dentro)
+- [Guía turística de Montecristi](https://montecristi.net/conoce-montecristi)
+- [Galerías](https://montecristi.net/galerias)
+- [En vivo](https://montecristi.net/en-vivo)
+
+## Fuentes de datos
+
+- [Sitemap XML](https://montecristi.net/sitemap.xml)
+- [News sitemap](https://montecristi.net/news-sitemap.xml)
+- [RSS](https://montecristi.net/feed.xml)
+- [Robots.txt](https://montecristi.net/robots.txt)
+
+## Información editorial
+
+- [Conócenos](https://montecristi.net/conocenos)
+- [Política editorial y correcciones](https://montecristi.net/politica-editorial)
+- [Aviso legal](https://montecristi.net/aviso-legal)
+- [Contacto](https://montecristi.net/contacto)
+
+Los rastreadores deben respetar las reglas de [robots.txt](https://montecristi.net/robots.txt). La disponibilidad de este archivo es información auxiliar para sistemas de IA y no sustituye el marcado HTML, las directivas para rastreadores ni las políticas editoriales del medio.

@@ -1,4 +1,4 @@
-import { getPosts, getMontecristiPosts, getCategories, getCategorySlug } from "@/lib/wp";
+import { getPosts, getMontecristiPosts, getCategories, getMontecristiCategories, getCategorySlug } from "@/lib/wp";
 import { getMostReadPosts } from "@/lib/analytics";
 import { NewsCard } from "@/components/NewsCard";
 import { CustomAd } from "@/components/CustomAd";
@@ -51,13 +51,22 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     };
   }
 
-  const categories = await getCategories().catch(() => []);
-  const category = categories.find((c) => c.slug === slug);
+  const [categories, montecristiCategories] = await Promise.all([
+    getCategories().catch(() => []),
+    getMontecristiCategories().catch(() => []),
+  ]);
+  const category = montecristiCategories.find((c) => c.slug === slug)
+    || categories.find((c) => c.slug === slug);
+  if (!category || category.count <= 0 || !(slug in siteConfig.categoryConfig)) {
+    return { title: "Sección no encontrada", robots: { index: false, follow: true } };
+  }
   const cfg = siteConfig.categoryConfig[slug as keyof typeof siteConfig.categoryConfig] || defaultConfig;
 
-  const catName = category?.name || slug.charAt(0).toUpperCase() + slug.slice(1);
-  const seoTitle = `▷ Noticias de ${catName} hoy | Último Minuto | Montecristi`;
-  const seoDesc = `Últimas noticias de ${catName} en Montecristi y la República Dominicana. ${cfg.description} Información actualizada al instante.`;
+  const catName = siteConfig.nav.find((item) => item.href === `/${slug}`)?.name
+    || category?.name
+    || slug.charAt(0).toUpperCase() + slug.slice(1);
+  const seoTitle = `Noticias de ${catName}`;
+  const seoDesc = `${cfg.description} Lee la cobertura y las noticias recientes de ${catName} en Montecristi.net.`;
 
   // og:image siempre con URL absoluta para que Google y Facebook puedan crawlearla
   const rawImage = (cfg as any).image ?? siteConfig.seo.defaultImage;
@@ -129,6 +138,7 @@ function GenericHero({ name, cfg }: { name: string; cfg: any }) {
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { category: slug } = await params;
   if (slug === "montecristi-por-dentro") return <MontecristiPorDentroPage />;
+  if (!(slug in siteConfig.categoryConfig)) notFound();
   return <CategoryContent slug={slug} />;
 }
 
@@ -187,19 +197,26 @@ function MontecristiPorDentroPage() {
 
 async function CategoryContent({ slug }: { slug: string }) {
 
-  const [categories, allPosts] = await Promise.all([
+  const [categories, montecristiCategories, allPosts] = await Promise.all([
     getCategories().catch(() => []),
+    getMontecristiCategories().catch(() => []),
     getPosts({ per_page: 24 }).catch(() => []),
   ]);
 
   const cfg = siteConfig.categoryConfig[slug as keyof typeof siteConfig.categoryConfig] || defaultConfig;
-  const category = categories.find((c) => c.slug === slug);
-  const categoryName = category?.name || slug.charAt(0).toUpperCase() + slug.slice(1);
+  const montecristiCategory = montecristiCategories.find((c) => c.slug === slug);
+  const primaryCategory = categories.find((c) => c.slug === slug);
+  const category = montecristiCategory || primaryCategory;
+  if (!category || category.count <= 0) notFound();
+  const categorySource = montecristiCategory ? 'montecristi' : undefined;
+  const categoryName = siteConfig.nav.find((item) => item.href === `/${slug}`)?.name
+    || category?.name
+    || slug.charAt(0).toUpperCase() + slug.slice(1);
 
-  // Solo traemos artículos de esa categoría. Si es Montecristi, usamos la fuente dedicada.
+  // Query the same WordPress feed that owns the category to prevent empty sections.
   let categoryPosts: WPPost[] = [];
-  if (slug === 'montecristi') {
-    categoryPosts = await getMontecristiPosts({ per_page: 19 }).catch(() => []);
+  if (categorySource && category) {
+    categoryPosts = await getMontecristiPosts({ category: category.id, per_page: 19 }).catch(() => []);
   } else if (category) {
     categoryPosts = await getPosts({ category: category.id, per_page: 19 }).catch(() => []);
   }
@@ -285,6 +302,7 @@ async function CategoryContent({ slug }: { slug: string }) {
                   initialPosts={feedPosts}
                   initialOffset={19}
                   categoryId={category?.id || 0}
+                  categorySource={categorySource}
                   perPage={18}
                 />
               </>
