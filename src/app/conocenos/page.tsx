@@ -51,18 +51,18 @@ export default function ConocenosPage() {
             <section className="relative z-20 -mt-16 mb-20 px-4">
                 <div className="container mx-auto max-w-4xl bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-gray-100 p-8 md:p-10 flex flex-wrap justify-center gap-8 md:gap-16 text-center">
                     <div className="flex flex-col items-center">
-                        <span className="text-5xl font-black italic text-brand-dark leading-tight">5+</span>
-                        <span className="text-[10px] uppercase font-bold tracking-widest text-brand-light">Años de Periodismo</span>
+                        <span className="text-5xl font-black italic text-brand-dark leading-tight">2019</span>
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-brand-light">Año de fundación</span>
                     </div>
                     <div className="w-px h-12 bg-gray-100 hidden md:block"></div>
                     <div className="flex flex-col items-center">
-                        <span className="text-5xl font-black italic text-brand-dark leading-tight">50K+</span>
-                        <span className="text-[10px] uppercase font-bold tracking-widest text-brand-light">Lectores Mensuales</span>
+                        <span className="text-5xl font-black italic text-brand-dark leading-tight">Montecristi</span>
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-brand-light">Sede editorial</span>
                     </div>
                     <div className="w-px h-12 bg-gray-100 hidden md:block"></div>
                     <div className="flex flex-col items-center">
-                        <span className="text-5xl font-black italic text-brand-dark leading-tight">24/7</span>
-                        <span className="text-[10px] uppercase font-bold tracking-widest text-brand-light">Información en Vivo</span>
+                        <span className="text-5xl font-black italic text-brand-dark leading-tight">Noroeste</span>
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-brand-light">Cobertura regional</span>
                     </div>
                 </div>
             </section>

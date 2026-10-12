@@ -22,6 +22,7 @@ import {
   FileText,
   Fuel,
   MapPin,
+  Globe,
 } from 'lucide-react'
 import { siteConfig } from '@/config/site'
 
@@ -157,7 +158,7 @@ export function Header() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (searchQuery.trim()) {
-      window.location.href = `/?s=${encodeURIComponent(searchQuery.trim())}`
+      window.location.href = `/buscar?q=${encodeURIComponent(searchQuery.trim())}`
       setIsMenuOpen(false)
     }
   }
@@ -394,17 +395,20 @@ export function Header() {
               <nav className="grid grid-cols-1 gap-1">
                 {[
                   { name: 'Portada Principal', href: '/', icon: Newspaper },
-                  { name: 'Edición Impresa (e-Paper)', href: '/edicion-impresa', icon: FileText, highlight: true },
-                  { name: 'Combustibles RD (MICM)', href: '/combustibles', icon: Fuel },
                   { name: 'Montecristi y Noroeste', href: '/montecristi', icon: Compass },
-                  { name: 'Montecristi por Dentro', href: '/montecristi-por-dentro', icon: MapPin, highlight: true },
-                  { name: 'Nacionales / República', href: '/larepublica', icon: TrendingUp },
-                  { name: 'Economía y Negocios', href: '/economia', icon: TrendingUp },
-                  { name: 'Deportes (LIDOM / MLB)', href: '/deportes', icon: Trophy },
-                  { name: 'Entretenimiento y Farándula', href: '/entretenimiento', icon: Sparkles },
-                  { name: 'Estilo de Vida', href: '/estilo', icon: Sparkles },
+                  { name: 'Nacionales', href: '/nacionales', icon: TrendingUp },
+                  { name: 'Política', href: '/politica', icon: TrendingUp },
+                  { name: 'Regionales', href: '/regionales', icon: MapPin },
+                  { name: 'Deportes', href: '/deportivas', icon: Trophy },
+                  { name: 'Internacionales', href: '/internacionales', icon: Globe },
+                  { name: 'Farándula', href: '/farandula', icon: Sparkles },
+                  { name: 'Así va el Mundo', href: '/elmundo', icon: Globe },
+                  { name: 'Salud', href: '/salud', icon: Sparkles },
+                  { name: 'Montecristi por Dentro', href: '/montecristi-por-dentro', icon: MapPin },
+                  { name: 'Edición Impresa', href: '/edicion-impresa', icon: FileText },
+                  { name: 'Combustibles', href: '/combustibles', icon: Fuel },
                   { name: 'Galerías Fotográficas', href: '/galerias', icon: Camera },
-                  { name: 'Transmisión En Vivo 24/7', href: '/en-vivo', icon: Radio, highlight: true },
+                  { name: 'Transmisión En Vivo', href: '/en-vivo', icon: Radio, highlight: true },
                 ].map((item) => {
                   const Icon = item.icon
                   return (

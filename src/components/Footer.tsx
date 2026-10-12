@@ -48,20 +48,17 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* 3. Directorio SEO & Pauta */}
-          <div className="lg:col-span-4 space-y-6">
-            <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-red-400 mb-6">PUBLICIDAD & EMPRESAS</h4>
-            <div className="text-[11px] text-gray-300 font-inter leading-relaxed space-y-2">
-              <p>Pauta con <strong>Montecristi.net</strong>, el periódico de Montecristi líder en noticias de Montecristi y la Línea Noroeste.</p>
-              <div className="flex flex-col gap-1 text-[11px] text-gray-300 pt-1">
-                <Link href="/montecristi" className="inline-block py-1.5 hover:text-white transition-colors">· Noticias de Montecristi Hoy</Link>
-                <Link href="/montecristi" className="inline-block py-1.5 hover:text-white transition-colors">· Montecristi Noticias de Última Hora</Link>
-                <Link href="/conoce-montecristi" className="inline-block py-1.5 hover:text-white transition-colors">· Periódico de Montecristi y Guía</Link>
-              </div>
+          {/* 3. Cobertura local */}
+          <div className="lg:col-span-4 space-y-5">
+            <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-red-400 mb-6">MONTECRISTI Y LA REGIÓN</h4>
+            <p className="text-xs text-gray-300 font-inter leading-relaxed max-w-sm">
+              Noticias de San Fernando, Manzanillo, Guayubín, Villa Vásquez, Castañuelas y las comunidades de la Línea Noroeste.
+            </p>
+            <div className="flex flex-col gap-1 text-[11px] text-gray-300 font-bold">
+              <Link href="/montecristi" className="inline-block py-1.5 hover:text-white transition-colors">Noticias de Montecristi</Link>
+              <Link href="/montecristi-por-dentro" className="inline-block py-1.5 hover:text-white transition-colors">Guías de Montecristi</Link>
+              <Link href="/contacto" prefetch={false} className="inline-block py-1.5 text-gray-400 hover:text-white transition-colors">Contacto editorial</Link>
             </div>
-            <Link href="/contacto" prefetch={false} className="inline-block bg-[#BF1B23] text-white px-8 py-3.5 text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-[#181818] transition-all shadow-xl hover:shadow-[#BF1B23]/20">
-              Anunciar mi Empresa
-            </Link>
           </div>
 
         </div>
@@ -69,6 +66,8 @@ export function Footer() {
         {/* 5. Legal Links Horizontal Section */}
         <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 py-8 border-t border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-gray-300">
           <Link href="/conocenos" prefetch={false} className="inline-block py-1.5 hover:text-white transition-colors">Conócenos</Link>
+          <Link href="/politica-editorial" prefetch={false} className="inline-block py-1.5 hover:text-white transition-colors">Política editorial</Link>
+          <Link href="/contacto" prefetch={false} className="inline-block py-1.5 hover:text-white transition-colors">Contacto</Link>
           <Link href="/aviso-legal" prefetch={false} className="inline-block py-1.5 hover:text-white transition-colors">Aviso Legal</Link>
           <Link href="/politica-de-privacidad" prefetch={false} className="inline-block py-1.5 hover:text-white transition-colors">Privacidad</Link>
           <Link href="/politica-de-cookies" prefetch={false} className="inline-block py-1.5 hover:text-white transition-colors">Cookies</Link>

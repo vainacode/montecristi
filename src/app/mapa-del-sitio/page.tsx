@@ -51,8 +51,9 @@ export default async function SitemapPage() {
 
   const institutionalPages = [
     { title: "Quiénes Somos / Conócenos", href: "/conocenos", icon: Sparkles },
-    { title: "Contacto y Publicidad", href: "/contacto", icon: Phone },
-    { title: "Aviso Legal y Editorial", href: "/aviso-legal", icon: Shield },
+    { title: "Contacto editorial", href: "/contacto", icon: Phone },
+    { title: "Política editorial y correcciones", href: "/politica-editorial", icon: Shield },
+    { title: "Aviso Legal", href: "/aviso-legal", icon: Shield },
     { title: "Política de Privacidad", href: "/politica-de-privacidad", icon: Shield },
     { title: "Política de Cookies", href: "/politica-de-cookies", icon: Shield },
     { title: "Términos y Condiciones", href: "/terminos", icon: Shield },
@@ -147,7 +148,7 @@ export default async function SitemapPage() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {siteConfig.nav.slice(3).map((item) => (
+            {siteConfig.nav.slice(1).map((item) => (
               <Link
                 key={item.name}
                 href={item.href}

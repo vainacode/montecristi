@@ -29,7 +29,7 @@ export default function TerminosPage() {
           <p>{siteConfig.name} promueve la libertad de expresión, sin embargo, nos reservamos el derecho de retirar todos aquellos comentarios y aportaciones que vulneren el respeto a la dignidad de la persona, que sean discriminatorios, xenófobos, racistas o pornográficos.</p>
 
           <h2>4. Publicidad y AdSense</h2>
-          <p>Parte del sitio web alberga contenidos publicitarios. Los anunciantes son los únicos responsables de asegurar que el material remitido para su inclusión cumpla con la normativa de la República Dominicana. Este sitio utiliza Google AdSense, por lo cual los usuarios quedan supeditados a los términos y condiciones del proveedor de publicidad (Google).</p>
+          <p>Este sitio muestra espacios de publicidad directa y utiliza Google AdSense para publicar anuncios. Los anuncios pueden ser seleccionados automáticamente por Google y sus socios. Su visualización no implica respaldo editorial de los productos o servicios anunciados. Para conocer cómo Google trata los datos publicitarios, consulte nuestra <a href="/politica-de-privacidad">Política de Privacidad</a> y <a href="/politica-de-cookies">Política de Cookies</a>.</p>
 
           <h2>5. Modificaciones</h2>
           <p>{siteConfig.name} se reserva el derecho de efectuar sin previo aviso las modificaciones que considere oportunas en su portal, pudiendo cambiar, suprimir o añadir tanto los contenidos y servicios sin justificación y de manera unilateral.</p>

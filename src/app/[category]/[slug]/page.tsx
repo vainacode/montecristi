@@ -101,7 +101,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       ],
       publishedTime: new Date(post.date).toISOString(),
       modifiedTime: new Date(post.modified ?? post.date).toISOString(),
-      authors: ["Redacción Montecristi"],
+      ...(post.dum_api?.author_name ? { authors: [post.dum_api.author_name] } : {}),
       section: categoryNames[0] || "Noticias",
     },
     twitter: {
@@ -119,24 +119,8 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   };
 }
 
-// Lista de dominios de feeds/fuentes a convertir en enlaces internos propios
-const SOURCE_DOMAINS = [
-  'noticiariord.net',
-  'santosvasquezinforma.com',
-  'www.santosvasquezinforma.com',
-  'diarioaldia.com',
-  'relojinformativo.do',
-  'morroinformativo.com',
-  'deultimominuto.net',
-  'losmocanos.com',
-  'www.losmocanos.com',
-  'deultimominuto.com',
-  'www.deultimominuto.com',
-  'remolacha.net'
-];
-
-// Utility to clean and format content, convert links and sanitize brands
-function formatContent(content: string, currentCategory = 'noticias') {
+// Format content while preserving publisher credits and original destinations.
+function formatContent(content: string) {
   let processed = content;
 
   // 1. ---- ELIMINAR ANUNCIOS Y CÓDIGOS DE TERCEROS INCRUSTADOS EN EL FEED WP ----
@@ -146,20 +130,6 @@ function formatContent(content: string, currentCategory = 'noticias') {
     .replace(/<div\b[^>]*class="[^"]*(?:ad-slot|ad-unit|ad_banner|wp-block-ad|anuncio|publicidad|adsbygoogle|banner-ad|ad-wrapper|code-block|advertisement)[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
     .replace(/<!--[\s\S]*?-->/g, ''); // comentarios de WordPress
 
-  // 2. ---- SANITIZACIÓN DE MARCA Y FUENTES EXTERNAS (100% Montecristi.net) ----
-  processed = processed
-    // Encabezados de agencia de noticias al inicio
-    .replace(/(?:Diario al D[ií]a|Noticiario RD|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa|Santos Vasquez|List[ií]n Diario|Diario Libre|El Caribe|El D[ií]a|Hoy Digital|CDN|SIN|Remolacha)\s*\|\s*/gi, '')
-    .replace(/(?:Diario al D[ií]a|Noticiario RD|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa|Santos Vasquez|List[ií]n Diario|Diario Libre|El Caribe|El D[ií]a|Hoy Digital|CDN|SIN|Remolacha)\s*[-–—]\s*/gi, '')
-    // Eliminar líneas de "Fuente:", "Tomado de:", "Vía:", "Créditos:"
-    .replace(/<p>\s*(?:Fuente|Tomado de|V[ií]a|Cr[eé]ditos|Foto|Redacci[oó]n|Autor)\s*:\s*[^<]*<\/p>/gi, '')
-    .replace(/\b(?:Fuente|Tomado de|V[ií]a|Cr[eé]ditos)\s*:\s*[^.\n<]+[.\n<]?/gi, '')
-    // Referencias a la publicación en el cuerpo del texto
-    .replace(/\b(?:para|en|por|según|informó|reportó|exclusiva de)\s+(?:Noticiario RD|Diario al D[ií]a|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa|Santos Vasquez)\b/gi, (match) => {
-      return match.replace(/(?:Noticiario RD|Diario al D[ií]a|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa|Santos Vasquez)/gi, siteConfig.name);
-    })
-    .replace(/\b(?:Noticiario RD|Diario al D[ií]a|Reloj Informativo|De [UÚ]ltimo Minuto|Santo[s]? V[aá]squez Informa|Santos Vasquez)\b/gi, siteConfig.name);
-
   // 3. ---- Convertir todos los <br> y saltos de línea de WordPress en párrafos reales ----
   processed = processed
     .replace(/<br\s*\/?>\s*/gi, '</p><p>')
@@ -167,62 +137,18 @@ function formatContent(content: string, currentCategory = 'noticias') {
     .replace(/<p>\s*<\/p>/gi, '')
     .replace(/<p>\s*&nbsp;\s*<\/p>/gi, '');
 
-  // 4. ---- CONVERSIÓN DE ENLACES: INTERNOS A NUESTRO SITIO, EXTERNOS CON TARGET BLANK ----
+  // 3. ---- Preserve each link destination; open absolute external links separately ----
   processed = processed.replace(
     /<a\s+([^>]*?)href=(["'])(.*?)\2([^>]*?)>([\s\S]*?)<\/a>/gi,
     (_match, before, _quote, rawHref, after, text) => {
       const cleanHref = rawHref.trim();
-      let isSourceDomain = false;
-      let path = '';
-
-      try {
-        if (cleanHref.startsWith('/') && !cleanHref.startsWith('//')) {
-          isSourceDomain = true;
-          path = cleanHref;
-        } else {
-          const parsed = new URL(cleanHref);
-          const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
-          if (SOURCE_DOMAINS.some(d => host === d || host.endsWith('.' + d))) {
-            isSourceDomain = true;
-            path = parsed.pathname;
-          }
-        }
-      } catch {
-        // Enlace relativo o malformado
-        if (cleanHref.startsWith('/')) {
-          isSourceDomain = true;
-          path = cleanHref;
-        }
-      }
-
-      if (isSourceDomain) {
-        // Convertir enlace a la ruta interna de montecristi.net
-        const cleanPath = path.replace(/\/+/g, '/').replace(/^\/|\/$/g, '');
-        let internalUrl = '/';
-        if (cleanPath) {
-          const parts = cleanPath.split('/').filter(Boolean);
-          if (parts.length === 1) {
-            internalUrl = `/${currentCategory}/${parts[0]}`;
-          } else {
-            internalUrl = `/${cleanPath}`;
-          }
-        }
-
-        const attrs = (before + ' ' + after)
-          .replace(/\s*(?:target|rel)=["'][^"']*["']/gi, '')
-          .replace(/\s+/g, ' ')
-          .trim();
-
-        return `<a href="${internalUrl}"${attrs ? ' ' + attrs : ''} class="text-brand-dark hover:text-brand-light font-bold underline decoration-brand-dark/30 hover:decoration-brand-dark transition-colors">${text}</a>`;
-      }
-
-      // Enlaces externos auténticos (mantener target="_blank" rel="noopener noreferrer")
       const attrs = (before + ' ' + after)
         .replace(/\s*(?:target|rel)=["'][^"']*["']/gi, '')
         .replace(/\s+/g, ' ')
         .trim();
-
-      return `<a href="${cleanHref}" target="_blank" rel="noopener noreferrer"${attrs ? ' ' + attrs : ''} class="text-brand-dark hover:text-brand-light font-bold underline decoration-brand-dark/30 hover:decoration-brand-dark transition-colors">${text}</a>`;
+      const isExternal = /^https?:\/\//i.test(cleanHref);
+      const safeAttrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : '';
+      return '<a href="' + cleanHref + '"' + safeAttrs + (attrs ? ' ' + attrs : '') + ' class="text-brand-dark hover:text-brand-light font-bold underline decoration-brand-dark/30 hover:decoration-brand-dark transition-colors">' + text + '</a>';
     }
   );
 
@@ -454,10 +380,7 @@ function formatContent(content: string, currentCategory = 'noticias') {
     })
     .replace(/data-wp-[^=\s]*="[^"]*"\s*/gi, '');
 
-  // 15. ---- Marca de Agua Invisible (Anti-Scraping) ------------------------------------------------------------
-  const watermark = `<div style="display:none;font-size:1px;color:transparent;opacity:0;">Este contenido pertenece a ${siteConfig.name} - ${siteConfig.url}. Prohibida su reproducción no autorizada.</div>`;
-  
-  return processed + watermark;
+  return processed;
 }
 
 function safeDecode(value: string): string {
@@ -521,7 +444,8 @@ async function ArticleContent({ category, slug }: { category: string; slug: stri
   const shareUrlParam = encodeURIComponent(shareUrl);
   const shareTitleParam = encodeURIComponent(toPlainText(post.title.rendered));
 
-  const formattedContent = formatContent(post.content.rendered, catSlug);
+  const formattedContent = formatContent(post.content.rendered);
+  const authorName = post.dum_api?.author_name?.trim();
   
   // Dividir el contenido para inyectar publicidad de forma limpia y equilibrada
   const rawParagraphs = formattedContent.split('</p>').map(p => p.trim()).filter(Boolean);
@@ -578,14 +502,10 @@ async function ArticleContent({ category, slug }: { category: string; slug: stri
         "datePublished": new Date(post.date).toISOString(),
         "dateModified": new Date(post.modified ?? post.date).toISOString(),
         "inLanguage": "es-DO",
-        "isAccessibleForFree": "True",
+        "isAccessibleForFree": true,
         "articleSection": categories[0] || "Noticias",
         "keywords": postTags.map((t) => t.name).join(", "),
-        "author": {
-          "@type": "Organization",
-          "name": "Redacción Montecristi",
-          "url": `${siteConfig.url}/conocenos`
-        },
+        ...(authorName ? { "author": { "@type": "Person", "name": authorName } } : {}),
         "publisher": {
           "@type": "NewsMediaOrganization",
           "@id": `${siteConfig.url}/#organization`,
@@ -693,13 +613,13 @@ async function ArticleContent({ category, slug }: { category: string; slug: stri
                 <div className="w-8 h-8 rounded-full bg-[#BF1B23] p-1.5 flex items-center justify-center shadow-sm overflow-hidden ring-1 ring-[#BF1B23]/20">
                   <Image
                     src="/logo.svg"
-                    alt="Redacción Montecristi"
+                    alt={authorName || `Publicado en ${siteConfig.name}`}
                     width={22}
                     height={22}
                     className="w-full h-full object-contain brightness-0 invert"
                   />
                 </div>
-                <span className="text-gray-900 font-bold">Redacción Montecristi</span>
+                <span className="text-gray-900 font-bold">{authorName || `Publicado en ${siteConfig.name}`}</span>
               </div>
               <span className="w-px h-3 bg-gray-200" />
               <div className="flex items-center gap-2">
@@ -714,7 +634,7 @@ async function ArticleContent({ category, slug }: { category: string; slug: stri
                 article={{
                   id: post.id,
                   title: toPlainText(post.title.rendered),
-                  author: "Redacción Montecristi",
+                  author: authorName || siteConfig.name,
                   date: formatDate(post.date),
                   category: categories[0] || 'NOTICIAS',
                   slug: post.slug,

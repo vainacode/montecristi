@@ -1,2 +1,3 @@
-// AdSense has been completely removed in favor of local banners from /ads.
+// AdSense is loaded globally from the site layout; this module remains as a
+// compatibility export for any legacy imports.
 export {};
