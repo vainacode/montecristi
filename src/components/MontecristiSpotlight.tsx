@@ -44,10 +44,10 @@ export function MontecristiSpotlight({ posts }: MontecristiSpotlightProps) {
     <section className="container mx-auto px-4 my-14">
       {/* ── 1. BANNER PRINCIPAL CON EL LOGO OFICIAL DEL RELOJ EN GRANDE ── */}
       <div className="relative mx-auto max-w-5xl rounded-3xl overflow-visible bg-gradient-to-r from-[#042564] via-[#021437] to-[#8A1017] border border-gray-200/20 shadow-[0_20px_50px_rgba(4,37,100,0.18)] mb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center px-6 py-8 md:px-12 md:py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center px-6 py-5 md:px-12 md:py-6">
           
           {/* Columna Izquierda: Información y Botón */}
-          <div className="lg:col-span-7 space-y-4">
+          <div className="lg:col-span-7 space-y-3">
             <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-black/40 border border-[#BF1B23]/40 text-[#ff4d55] text-[10px] font-black uppercase tracking-[0.25em] shadow-inner">
               <Radio size={12} className="text-[#ff4d55] animate-pulse" />
               <span>COBERTURA EXCLUSIVA · LÍNEA NOROESTE</span>
@@ -78,8 +78,8 @@ export function MontecristiSpotlight({ posts }: MontecristiSpotlightProps) {
           </div>
 
           {/* Columna Derecha: El Logo Oficial del Reloj de Montecristi en Grande */}
-          <div className="lg:col-span-5 flex justify-center lg:justify-end relative mt-6 lg:mt-0">
-            <div className="relative w-[260px] h-[260px] sm:w-[320px] sm:h-[320px] lg:w-[380px] lg:h-[380px] lg:-mt-12 lg:-mb-8 drop-shadow-[0_25px_35px_rgba(0,0,0,0.6)] filter transition-transform duration-700 hover:scale-105 flex items-center justify-center p-4">
+          <div className="lg:col-span-5 flex justify-center lg:justify-end relative mt-2 lg:mt-0">
+            <div className="relative w-[180px] h-[180px] sm:w-[220px] sm:h-[220px] lg:w-[250px] lg:h-[250px] lg:-mt-5 lg:-mb-5 drop-shadow-[0_25px_35px_rgba(0,0,0,0.6)] filter transition-transform duration-700 hover:scale-105 flex items-center justify-center p-4">
               <Image
                 src="/logo.svg"
                 alt="Montecristi.net"
