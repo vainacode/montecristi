@@ -335,9 +335,12 @@ export async function getMontecristiPosts(params: {
   per_page?: number;
   page?: number;
   offset?: number;
+  category?: number;
+  categorySlug?: string;
 } = {}): Promise<WPPost[]> {
   const query = new URLSearchParams();
-  query.append('categories', (siteConfig.api.montecristiCategoryId || 6).toString());
+  if (params.category) query.append('categories', params.category.toString());
+  else if (!params.categorySlug) query.append('categories', (siteConfig.api.montecristiCategoryId || 6).toString());
   if (params.per_page) query.append('per_page', params.per_page.toString());
   if (params.page) query.append('page', params.page.toString());
   if (params.offset) query.append('offset', params.offset.toString());
@@ -349,11 +352,14 @@ export async function getMontecristiPosts(params: {
   ];
   query.append('_fields', fields.join(','));
 
-  const cacheKey = `montecristi:posts:${query.toString()}`;
+  const cacheKey = `montecristi:posts:${params.categorySlug ?? ''}:${query.toString()}`;
   const montecristiBase = sources.montecristi.api;
 
   const posts = await cachedFetch(cacheKey, async () => {
     try {
+      if (params.categorySlug && !params.category) {
+        throw new Error(`Categoría local ${params.categorySlug} sin ID`);
+      }
       const data = await fetchWPJson<WPPost[]>(`${montecristiBase}/posts?${query.toString()}`, siteConfig.api.revalidate);
       if (!Array.isArray(data)) throw new Error('La API de Montecristi no devolvió una lista');
       return data;
@@ -362,7 +368,10 @@ export async function getMontecristiPosts(params: {
       const perPage = params.per_page || 10;
       const offset = params.offset ?? ((params.page || 1) - 1) * perPage;
       try {
-        return await getFeedPosts(sources.montecristi.feed, perPage, offset);
+        const feedUrl = params.categorySlug
+          ? `${siteRootFromApi(montecristiBase)}/category/${params.categorySlug}/feed/`
+          : sources.montecristi.feed;
+        return await getFeedPosts(feedUrl, perPage, offset);
       } catch (feedError) {
         console.error('[WP] Error fetching Montecristi RSS fallback:', feedError);
         throw e;
@@ -453,6 +462,19 @@ export async function getCategories(): Promise<WPCategory[]> {
       console.error('[WP] Error fetching categories:', e);
       throw e;
     }
+  }, 86400);
+  return Array.isArray(categories) ? categories : [];
+}
+
+export async function getMontecristiCategories(): Promise<WPCategory[]> {
+  const cacheKey = 'categories:montecristi';
+  const categories = await cachedFetch(cacheKey, async () => {
+    const data = await fetchWPJson<WPCategory[]>(
+      `${sources.montecristi.api}/categories?per_page=100&_fields=id,name,slug,count`,
+      86400,
+    );
+    if (!Array.isArray(data)) throw new Error('La API de categorías locales no devolvió una lista');
+    return data;
   }, 86400);
   return Array.isArray(categories) ? categories : [];
 }

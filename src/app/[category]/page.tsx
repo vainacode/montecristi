@@ -1,4 +1,4 @@
-import { getPosts, getMontecristiPosts, getCategories, toPlainText } from "@/lib/wp";
+import { getPosts, getMontecristiPosts, getMontecristiCategories, toPlainText } from "@/lib/wp";
 import type { WPCategory } from "@/lib/wp";
 import { getMostReadPosts } from "@/lib/analytics";
 import { NewsCard } from "@/components/NewsCard";
@@ -83,12 +83,14 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     };
   }
 
-  const categories = await getCategories().catch(() => []);
+  const categories = await getMontecristiCategories().catch(() => []);
   if (isUnknownCategory(slug, categories)) notFound();
   const category = categories.find((c) => c.slug === slug);
   const cfg = getCategoryConfig(slug);
 
-  const catName = toPlainText(category?.name) || slug.charAt(0).toUpperCase() + slug.slice(1);
+  const catName = toPlainText(category?.name)
+    || siteConfig.nav.find((item) => item.href === `/${slug}`)?.name
+    || slug.charAt(0).toUpperCase() + slug.slice(1);
   // La plantilla del layout agrega " | Montecristi.net".
   const seoTitle = `Noticias de ${catName} hoy`;
   const seoDesc = `Últimas noticias de ${catName} en Montecristi y la República Dominicana. ${cfg.description} Información actualizada al instante.`;
@@ -222,7 +224,7 @@ function MontecristiPorDentroPage() {
 async function CategoryContent({ slug }: { slug: string }) {
 
   const [categories, allPosts] = await Promise.all([
-    getCategories().catch(() => []),
+    getMontecristiCategories().catch(() => []),
     getPosts({ per_page: 24 }).catch(() => []),
   ]);
 
@@ -230,15 +232,14 @@ async function CategoryContent({ slug }: { slug: string }) {
 
   const cfg = getCategoryConfig(slug);
   const category = categories.find((c) => c.slug === slug);
-  const categoryName = toPlainText(category?.name) || slug.charAt(0).toUpperCase() + slug.slice(1);
+  const categoryName = toPlainText(category?.name)
+    || siteConfig.nav.find((item) => item.href === `/${slug}`)?.name
+    || slug.charAt(0).toUpperCase() + slug.slice(1);
 
-  // Solo traemos artículos de esa categoría. Si es Montecristi, usamos la fuente dedicada.
+  // Todas las secciones del menú usan categorías existentes en el feed que las publica.
   let categoryPosts: WPPost[] = [];
-  if (slug === 'montecristi') {
-    categoryPosts = await getMontecristiPosts({ per_page: 19 }).catch(() => []);
-  } else if (category || categories.length === 0) {
-    // Si la API de categorías no respondió, getPosts usa el feed RSS de la categoría por su slug.
-    categoryPosts = await getPosts({ category: category?.id, categorySlug: slug, per_page: 19 }).catch(() => []);
+  if (category || slug in siteConfig.categoryConfig) {
+    categoryPosts = await getMontecristiPosts({ category: category?.id, categorySlug: slug, per_page: 19 }).catch(() => []);
   }
 
   const heroPost = categoryPosts[0];
@@ -322,6 +323,7 @@ async function CategoryContent({ slug }: { slug: string }) {
                   initialPosts={feedPosts}
                   initialOffset={19}
                   categoryId={category?.id || 0}
+                  categorySource="montecristi"
                   perPage={18}
                 />
               </>
