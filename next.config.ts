@@ -89,23 +89,10 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
-    // Solo WebP: cada formato extra es otra transformación que cuenta en la cuota de
-    // Vercel (AVIF además es lento de generar). Las fotos de noticias no cambian: 30 días.
-    formats: ['image/webp'],
-    minimumCacheTTL: 2592000,
-    deviceSizes: [320, 480, 640, 750, 828, 1080, 1200, 1440],
-    // Solo dominios conocidos: con "**" el optimizador era un proxy abierto que cualquiera
-    // podía usar para gastar la cuota de imágenes. Las fotos de las fuentes llegan como
-    // rutas propias (/media/...); si alguna foto externa no está aquí, ProtectedImage la
-    // carga directa.
-    remotePatterns: [
-      { protocol: "https", hostname: "i.ytimg.com" },
-      { protocol: "https", hostname: "i.ibb.co" },
-      { protocol: "https", hostname: "secure.gravatar.com" },
-      { protocol: "https", hostname: "i0.wp.com" },
-      { protocol: "https", hostname: "i1.wp.com" },
-      { protocol: "https", hostname: "i2.wp.com" },
-    ],
+    // El optimizador de Next (/_next/image) se desactiva: su cuota de Vercel se agota y las
+    // fotos dejan de verse (HTTP 402). Las fotos ya llegan como URL final (/media/... o la
+    // fuente), y /media las guarda 30 días en el CDN, así que no se pierde velocidad.
+    unoptimized: true,
   },
 };
 

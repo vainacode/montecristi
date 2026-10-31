@@ -60,6 +60,12 @@ export const metadata: Metadata = {
   creator: siteConfig.name,
   publisher: siteConfig.name,
   metadataBase: new URL(siteConfig.url),
+  // Descubrimiento del feed RSS desde cualquier página (lectores y rastreadores).
+  alternates: {
+    types: {
+      "application/rss+xml": `${siteConfig.url}/feed.xml`,
+    },
+  },
 
   // Robots y Motores IA
   robots: {
