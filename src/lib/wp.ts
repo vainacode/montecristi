@@ -1,6 +1,6 @@
 import "server-only";
 import { siteConfig } from "@/config/site";
-import { sources } from "@/config/sources";
+import { sources, extraFeeds } from "@/config/sources";
 import { scrubSourceText } from "@/lib/media";
 import { slugify, type WPPost, type WPCategory, type WPGallery, type WPGalleryResponse } from "@/lib/wp-helpers";
 
@@ -273,6 +273,20 @@ function siteRootFromApi(apiUrl: string): string {
   return apiUrl.replace(/\/wp-json\/.*$/, "");
 }
 
+/** Últimos artículos de los feeds de otros medios, ya convertidos a WPPost. */
+async function getExtraFeedPosts(perPage: number): Promise<WPPost[]> {
+  const cacheKey = `extra-feeds:${perPage}`;
+  const posts = await cachedFetch(cacheKey, async () => {
+    const results = await Promise.allSettled(extraFeeds.map((f) => getFeedPosts(f.feed, perPage)));
+    return results.flatMap((r) => {
+      if (r.status === "fulfilled") return r.value;
+      console.error("[WP] Error fetching extra feed:", r.reason);
+      return [];
+    });
+  }, siteConfig.api.revalidate);
+  return scrubPosts(posts ?? []);
+}
+
 export async function getPosts(params: {
   category?: number;
   per_page?: number;
@@ -284,6 +298,22 @@ export async function getPosts(params: {
   /** Slug de la categoría, para usar su feed RSS si la API REST no responde. */
   categorySlug?: string;
 } = {}): Promise<WPPost[]> {
+  const posts = await getWordPressPosts(params);
+
+  // La portada general (primera página) mezcla también los feeds de otros medios.
+  const isDefaultFirstPage = !params.category && !params.categorySlug && !params.tags && !params.search
+    && !params.offset && (!params.page || params.page === 1);
+  if (!isDefaultFirstPage) return posts;
+
+  const perPage = params.per_page || 10;
+  const extra = await getExtraFeedPosts(perPage);
+  const merged = [...posts, ...extra].sort(
+    (a, b) => Date.parse(b.date) - Date.parse(a.date),
+  );
+  return merged.slice(0, perPage);
+}
+
+async function getWordPressPosts(params: Parameters<typeof getPosts>[0] = {}): Promise<WPPost[]> {
   const query = new URLSearchParams();
   if (params.category) query.append('categories', params.category.toString());
   if (params.tags) query.append('tags', params.tags.toString());
@@ -420,6 +450,17 @@ async function lookupPostBySlugRaw(slug: string): Promise<{ post: WPPost | null 
         }
       } catch (e) {
         console.error('[WP] Error fetching post by ID from Montecristi source:', e);
+      }
+    }
+
+    // Artículos de los feeds de otros medios.
+    const wantedSlug = decodeURIComponent(cleanSlug);
+    for (const { feed } of extraFeeds) {
+      try {
+        const found = (await getFeedPosts(feed, 30)).find((p) => p.slug === wantedSlug || String(p.id) === wantedSlug);
+        if (found) return { post: found };
+      } catch (e) {
+        console.error(`[WP] Error buscando el slug en el feed ${feed}:`, e);
       }
     }
 

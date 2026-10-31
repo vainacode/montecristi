@@ -16,12 +16,23 @@ export const sources = {
 };
 
 /**
+ * Feeds RSS de otros medios. Sus artículos se mezclan con los de la portada y se
+ * buscan al abrir un artículo. La clave debe existir también en `mediaOrigins`.
+ */
+export const extraFeeds: { key: string; feed: string }[] = [
+  { key: "c", feed: "https://diarioaldia.com/feed/" },
+  { key: "d", feed: "https://noticiapais.com/feed/" },
+];
+
+/**
  * Orígenes de las fotos. Se publican como /media/<clave>/<ruta> para que el
  * dominio de la fuente no aparezca en el sitio.
  */
 export const mediaOrigins: Record<string, string> = {
   a: "https://www.losmocanos.com",
   b: "https://www.santosvasquezinforma.com",
+  c: "https://diarioaldia.com",
+  d: "https://noticiapais.com",
 };
 
 /** Nombres de marca de las fuentes que se reemplazan por el nombre del sitio. */
@@ -31,4 +42,8 @@ export const hiddenBrandPatterns: RegExp[] = [
   /(?:www\.)?los\s?mocanos\.com/gi,
   /\bLosMocanos\b/gi,
   /(?:www\.)?santos?\s*v[aá]squez\s*informa(?:\.com)?/gi,
+  /(?:www\.)?diarioaldia\.com/gi,
+  /\bDiario\s?Al\s?D[ií]a\b/gi,
+  /(?:www\.)?noticiapais\.com/gi,
+  /\bnoticiapais\b/gi,
 ];
