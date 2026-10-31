@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Film, Sparkles } from 'lucide-react';
+import { Film, Play, Sparkles } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 
 const IconYouTube = () => (
@@ -48,6 +48,8 @@ const VIDEOS: VideoItem[] = [
 
 export function MontecristiVideoSection() {
   const [currentVideo, setCurrentVideo] = useState<VideoItem>(VIDEOS[0]);
+  // El iframe de YouTube solo se crea al hacer clic: así no carga su reproductor al abrir la página.
+  const [playing, setPlaying] = useState(false);
 
   return (
     <section className="container mx-auto px-4 my-16">
@@ -84,15 +86,37 @@ export function MontecristiVideoSection() {
         {/* Reproductor Directo en la Página (Sin textos duplicados ni modales) */}
         <div className="lg:col-span-8 rounded-3xl overflow-hidden bg-black border border-gray-200/80 shadow-lg">
           <div className="relative aspect-video w-full">
-            <iframe
-              key={currentVideo.id}
-              src={`https://www.youtube-nocookie.com/embed/${currentVideo.id}?rel=0`}
-              title={currentVideo.title}
-              allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-              className="absolute inset-0 w-full h-full border-0"
-              loading="lazy"
-            />
+            {playing ? (
+              <iframe
+                key={currentVideo.id}
+                src={`https://www.youtube-nocookie.com/embed/${currentVideo.id}?rel=0&autoplay=1`}
+                title={currentVideo.title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="absolute inset-0 w-full h-full border-0"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setPlaying(true)}
+                className="group absolute inset-0 w-full h-full cursor-pointer"
+                aria-label={`Reproducir ${currentVideo.title}`}
+              >
+                <Image
+                  src={`https://i.ytimg.com/vi/${currentVideo.id}/hqdefault.jpg`}
+                  alt={currentVideo.title}
+                  fill
+                  unoptimized
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 66vw"
+                />
+                <span className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
+                  <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#BF1B23] text-white shadow-xl group-hover:scale-110 transition-transform">
+                    <Play size={28} className="fill-white ml-1" />
+                  </span>
+                </span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -111,7 +135,10 @@ export function MontecristiVideoSection() {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => setCurrentVideo(item)}
+                onClick={() => {
+                  setCurrentVideo(item);
+                  setPlaying(true);
+                }}
                 className={`w-full text-left group flex items-center gap-4 p-3.5 rounded-2xl border transition-all cursor-pointer ${
                   isCurrent
                     ? 'bg-red-50/70 border-[#BF1B23]/40 shadow-xs ring-1 ring-[#BF1B23]/20'
@@ -124,6 +151,7 @@ export function MontecristiVideoSection() {
                     src={`https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`}
                     alt={item.title}
                     fill
+                    unoptimized
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                     sizes="112px"
                   />
