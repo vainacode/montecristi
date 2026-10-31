@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { BroadcastCintillo } from './BroadcastCintillo';
+import { isLocalImage } from '@/lib/wp-helpers';
 
 interface ProtectedImageProps {
   src?: string | null;
@@ -196,7 +197,7 @@ export function ProtectedImage({
         fetchPriority={priority ? 'high' : undefined}
         loading={priority ? undefined : 'lazy'}
         onLoad={() => setLoaded(true)}
-        unoptimized={useDirect}
+        unoptimized={useDirect || !isLocalImage(src)}
         referrerPolicy={useDirect ? 'no-referrer' : undefined}
         onError={() => {
           if (!useDirect && src && /^https?:\/\//.test(src)) {
