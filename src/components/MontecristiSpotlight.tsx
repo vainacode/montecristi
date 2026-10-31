@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { WPPost, getFeaturedImage, getCategorySlug, toPlainText, formatDate } from '@/lib/wp-helpers';
 import { ProtectedImage } from './ProtectedImage';
+import { SourceCredit } from './SourceCredit';
 import { ArrowRight, Clock, Radio } from 'lucide-react';
 
 interface MontecristiSpotlightProps {
@@ -127,6 +128,7 @@ export function MontecristiSpotlight({ posts }: MontecristiSpotlightProps) {
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#BF1B23] block mb-2">
                     MONTECRISTI
                   </span>
+                  <SourceCredit source={post.source} className="block mb-2" />
                   <h3 className="text-gray-900 text-sm md:text-[15px] font-bold leading-snug line-clamp-3 group-hover:text-[#BF1B23] transition-colors">
                     {cleanTitle}
                   </h3>

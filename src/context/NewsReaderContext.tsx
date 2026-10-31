@@ -15,6 +15,8 @@ export interface ArticleAudioData {
   id: number;
   title: string;
   author?: string;
+  /** Medio del que salió la noticia; se nombra al inicio de la locución. */
+  source?: string;
   date?: string;
   category?: string;
   slug?: string;
@@ -87,16 +89,28 @@ function normalizeForBroadcast(text: string): string {
     .replace(/\bLic\.\s*/gi, 'Licenciado ')
     .replace(/\bIng\.\s*/gi, 'Ingeniero ')
     .replace(/\bDr\.\s*/gi, 'Doctor ')
+    // Enlaces y correos no se leen en voz alta.
+    .replace(/https?:\/\/\S+|www\.\S+/gi, '')
+    .replace(/\S+@\S+\.\S+/g, '')
     .replace(/^(?:Por\s+)?Redacci[oó]n\s+Montecristi\s*[|–-]?\s*/gi, '')
     .replace(/\bRedacci[oó]n\s+Montecristi\s*[|–-]\s*/gi, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
+// Líneas de relleno de las páginas (llamados a leer, créditos, pies) que no son parte de la noticia.
+const BOILERPLATE = /^(?:l[ée]a\s+tambi[ée]n|leer\s+m[áa]s|lea\s+m[áa]s|te\s+puede\s+interesar|s[íi]guenos|suscr[íi]base|compartir|foto:|fotos?\s*:|cr[ée]dito|video:|publicidad)/i;
+
 /**
  * Limpia y normaliza el HTML de WordPress transformándolo en un guion de reportaje periodístico
  */
-function cleanArticleContent(htmlContent: string, title: string, author?: string, date?: string): string[] {
+function cleanArticleContent(
+  htmlContent: string,
+  title: string,
+  author?: string,
+  date?: string,
+  source?: string,
+): string[] {
   if (typeof window === 'undefined') return [title];
 
   const parser = new DOMParser();
@@ -122,6 +136,7 @@ function cleanArticleContent(htmlContent: string, title: string, author?: string
   introParts.push(`Montecristi punto net presenta.`);
   introParts.push(`Titular: ${cleanTitleText}.`);
   if (date) introParts.push(`Reporte del ${date}.`);
+  if (source) introParts.push(`Información de ${normalizeForBroadcast(source)}.`);
   textBlocks.push(introParts.join(' '));
 
   // 2. Extracción y Normalización del Cuerpo de la Noticia
@@ -133,7 +148,7 @@ function cleanArticleContent(htmlContent: string, title: string, author?: string
     if (el.tagName === 'DIV' && el.querySelector('p, h2, h3, h4')) return;
 
     const raw = el.textContent?.trim() || '';
-    if (raw.length > 20 && !seenTexts.has(raw)) {
+    if (raw.length > 20 && !BOILERPLATE.test(raw) && !seenTexts.has(raw)) {
       seenTexts.add(raw);
       const broadcastText = normalizeForBroadcast(raw);
       if (broadcastText.length > 10) {
@@ -391,7 +406,8 @@ export function NewsReaderProvider({ children }: { children: ReactNode }) {
       article.content,
       article.title,
       article.author,
-      article.date
+      article.date,
+      article.source,
     );
 
     setCurrentArticle(article);

@@ -67,8 +67,19 @@ export function slugify(text: string): string {
     .replace(/--+/g, "-");
 }
 
+/** Medio del que salió la noticia: se muestra al lector como crédito. */
+export interface PostSource {
+  name: string;
+  /** Página principal del medio. */
+  url: string;
+  /** Enlace al artículo original, si la fuente lo entrega. */
+  link?: string;
+}
+
 export interface WPPost {
   id: number;
+  /** Fuente de la noticia (siempre presente en los artículos que llegan al sitio). */
+  source?: PostSource;
   date: string;
   /** Última modificación (ISO). Ausente en posts que vienen del RSS. */
   modified?: string;

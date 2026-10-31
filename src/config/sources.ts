@@ -6,10 +6,14 @@ import "server-only";
  */
 export const sources = {
   main: {
+    name: "Los Mocanos",
+    url: "https://www.losmocanos.com",
     api: "https://www.losmocanos.com/wp-json/wp/v2",
     feed: "https://www.losmocanos.com/feed/",
   },
   montecristi: {
+    name: "Santos Vásquez Informa",
+    url: "https://www.santosvasquezinforma.com",
     api: "https://www.santosvasquezinforma.com/wp-json/wp/v2",
     feed: "https://www.santosvasquezinforma.com/category/montecristi/feed/",
   },
@@ -19,9 +23,9 @@ export const sources = {
  * Feeds RSS de otros medios. Sus artículos se mezclan con los de la portada y se
  * buscan al abrir un artículo. La clave debe existir también en `mediaOrigins`.
  */
-export const extraFeeds: { key: string; feed: string }[] = [
-  { key: "c", feed: "https://diarioaldia.com/feed/" },
-  { key: "d", feed: "https://noticiapais.com/feed/" },
+export const extraFeeds: { key: string; name: string; url: string; feed: string }[] = [
+  { key: "c", name: "Diario Al Día", url: "https://diarioaldia.com", feed: "https://diarioaldia.com/feed/" },
+  { key: "d", name: "Noticia País", url: "https://noticiapais.com", feed: "https://noticiapais.com/feed/" },
 ];
 
 /**

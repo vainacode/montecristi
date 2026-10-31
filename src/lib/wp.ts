@@ -2,11 +2,22 @@ import "server-only";
 import { siteConfig } from "@/config/site";
 import { sources, extraFeeds } from "@/config/sources";
 import { scrubSourceText } from "@/lib/media";
-import { slugify, type WPPost, type WPCategory, type WPGallery, type WPGalleryResponse } from "@/lib/wp-helpers";
+import { slugify, type PostSource, type WPPost, type WPCategory, type WPGallery, type WPGalleryResponse } from "@/lib/wp-helpers";
 
 export * from "@/lib/wp-helpers";
 
 const BASE_URL = sources.main.api;
+
+const mainSource: PostSource = { name: sources.main.name, url: sources.main.url };
+const montecristiSource: PostSource = { name: sources.montecristi.name, url: sources.montecristi.url };
+
+/** Marca cada artículo con su medio de origen y el enlace al original. */
+function tagSource(posts: WPPost[], source: PostSource): WPPost[] {
+  return posts.map((p) => ({
+    ...p,
+    source: { ...source, link: (p as WPPost & { link?: string }).link },
+  }));
+}
 
 // Solo incrustamos lo que usamos (foto destacada y categorías/etiquetas): sin autor,
 // comentarios ni revisiones, la respuesta de WordPress pesa bastante menos.
@@ -83,8 +94,11 @@ async function refreshCache<T>(
 // Quita de un post (título, contenido, Yoast/Rank Math, imágenes...) el dominio y la
 // marca de la fuente: las fotos pasan a /media/<clave>/... y los nombres al del sitio.
 function scrubPost<T>(post: T): T {
+  // El medio de origen se conserva tal cual: su nombre y enlace son el crédito al lector.
+  const { source, ...rest } = post as T & { source?: PostSource };
   try {
-    return JSON.parse(scrubSourceText(JSON.stringify(post))) as T;
+    const clean = JSON.parse(scrubSourceText(JSON.stringify(rest))) as T;
+    return source ? { ...clean, source } : clean;
   } catch {
     return post;
   }
@@ -197,7 +211,7 @@ function hashId(text: string): number {
   return Math.abs(h);
 }
 
-export function parseFeed(xml: string): WPPost[] {
+export function parseFeed(xml: string, source?: PostSource): WPPost[] {
   const items = xml.match(/<item\b[\s\S]*?<\/item>/gi) || [];
   return items.map((item) => {
     const link = xmlTag(item, "link");
@@ -228,6 +242,7 @@ export function parseFeed(xml: string): WPPost[] {
       categories: [],
       jetpack_featured_media_url: image ? decodeXml(image) : undefined,
       _embedded: { "wp:term": [terms] },
+      source: source ? { ...source, link: link || undefined } : undefined,
     } as WPPost;
   }).filter((p) => p.title.rendered && p.slug);
 }
@@ -236,7 +251,7 @@ export function parseFeed(xml: string): WPPost[] {
  * Lee un feed RSS de WordPress y devuelve los posts entre `offset` y `offset + perPage`.
  * WordPress entrega ~10 ítems por página del feed, así que pedimos `?paged=N` hasta tener suficientes.
  */
-async function getFeedPosts(feedUrl: string, perPage: number, offset = 0): Promise<WPPost[]> {
+async function getFeedPosts(feedUrl: string, perPage: number, offset = 0, source?: PostSource): Promise<WPPost[]> {
   const needed = offset + perPage;
   const collected: WPPost[] = [];
   const seen = new Set<string>();
@@ -261,7 +276,7 @@ async function getFeedPosts(feedUrl: string, perPage: number, offset = 0): Promi
     if (page === 1 && !/<rss|<feed|<item/i.test(xml)) {
       throw new Error(`El feed no es RSS válido en ${url}: ${xml.slice(0, 120)}`);
     }
-    const items = parseFeed(xml).filter((p) => !seen.has(p.slug) && seen.add(p.slug));
+    const items = parseFeed(xml, source).filter((p) => !seen.has(p.slug) && seen.add(p.slug));
     if (items.length === 0) break;
     collected.push(...items);
   }
@@ -277,7 +292,9 @@ function siteRootFromApi(apiUrl: string): string {
 async function getExtraFeedPosts(perPage: number): Promise<WPPost[]> {
   const cacheKey = `extra-feeds:${perPage}`;
   const posts = await cachedFetch(cacheKey, async () => {
-    const results = await Promise.allSettled(extraFeeds.map((f) => getFeedPosts(f.feed, perPage)));
+    const results = await Promise.allSettled(
+      extraFeeds.map((f) => getFeedPosts(f.feed, perPage, 0, { name: f.name, url: f.url })),
+    );
     return results.flatMap((r) => {
       if (r.status === "fulfilled") return r.value;
       console.error("[WP] Error fetching extra feed:", r.reason);
@@ -324,7 +341,7 @@ async function getWordPressPosts(params: Parameters<typeof getPosts>[0] = {}): P
   // Las listas solo necesitan título, imagen y categorías. Evitamos enviar el
   // contenido completo de cada artículo y el resto del payload de WordPress.
   const fields = [
-    'id', 'date', 'date_gmt', 'modified', 'modified_gmt', 'slug', 'title', 'excerpt', 'featured_media',
+    'id', 'date', 'date_gmt', 'modified', 'modified_gmt', 'slug', 'link', 'title', 'excerpt', 'featured_media',
     'featured_media_url', 'jetpack_featured_media_url', 'dum_api',
     'categories', '_links', '_embedded', 'yoast_head_json', 'rank_math_head_json',
   ];
@@ -340,7 +357,7 @@ async function getWordPressPosts(params: Parameters<typeof getPosts>[0] = {}): P
       if (params.categorySlug && !params.category) throw new Error(`Categoría ${params.categorySlug} sin ID`);
       const data = await fetchWPJson<WPPost[]>(`${BASE_URL}/posts?${query.toString()}`, siteConfig.api.revalidate);
       if (!Array.isArray(data)) throw new Error('La API de posts no devolvió una lista');
-      return data;
+      return tagSource(data, mainSource);
     } catch (e) {
       console.error('[WP] Error fetching posts:', e);
       // Búsquedas y etiquetas no tienen feed equivalente; una categoría solo si conocemos su slug.
@@ -351,7 +368,7 @@ async function getWordPressPosts(params: Parameters<typeof getPosts>[0] = {}): P
       const perPage = params.per_page || 10;
       const offset = params.offset ?? ((params.page || 1) - 1) * perPage;
       try {
-        return await getFeedPosts(feedUrl, perPage, offset);
+        return await getFeedPosts(feedUrl, perPage, offset, mainSource);
       } catch (feedError) {
         console.error('[WP] Error fetching RSS fallback:', feedError);
         throw e;
@@ -376,7 +393,7 @@ export async function getMontecristiPosts(params: {
   if (params.offset) query.append('offset', params.offset.toString());
   query.append('_embed', EMBED);
   const fields = [
-    'id', 'date', 'date_gmt', 'modified', 'modified_gmt', 'slug', 'title', 'excerpt', 'featured_media',
+    'id', 'date', 'date_gmt', 'modified', 'modified_gmt', 'slug', 'link', 'title', 'excerpt', 'featured_media',
     'featured_media_url', 'jetpack_featured_media_url', 'dum_api',
     'categories', '_links', '_embedded', 'yoast_head_json', 'rank_math_head_json',
   ];
@@ -392,7 +409,7 @@ export async function getMontecristiPosts(params: {
       }
       const data = await fetchWPJson<WPPost[]>(`${montecristiBase}/posts?${query.toString()}`, siteConfig.api.revalidate);
       if (!Array.isArray(data)) throw new Error('La API de Montecristi no devolvió una lista');
-      return data;
+      return tagSource(data, montecristiSource);
     } catch (e) {
       console.error('[WP] Error fetching Montecristi posts:', e);
       const perPage = params.per_page || 10;
@@ -401,7 +418,7 @@ export async function getMontecristiPosts(params: {
         const feedUrl = params.categorySlug
           ? `${siteRootFromApi(montecristiBase)}/category/${params.categorySlug}/feed/`
           : sources.montecristi.feed;
-        return await getFeedPosts(feedUrl, perPage, offset);
+        return await getFeedPosts(feedUrl, perPage, offset, montecristiSource);
       } catch (feedError) {
         console.error('[WP] Error fetching Montecristi RSS fallback:', feedError);
         throw e;
@@ -427,11 +444,11 @@ async function lookupPostBySlugRaw(slug: string): Promise<{ post: WPPost | null 
     let anySourceAnswered = false;
 
     // 1. Fuente principal  2. Fuente de Montecristi (santosvasquezinforma.com)
-    for (const base of [BASE_URL, montecristiBase]) {
+    for (const [base, source] of [[BASE_URL, mainSource], [montecristiBase, montecristiSource]] as const) {
       try {
         const posts = await fetchWPJson<WPPost[]>(`${base}/posts?slug=${cleanSlug}&_embed=${EMBED}`, revalidate);
         anySourceAnswered = true;
-        if (Array.isArray(posts) && posts.length > 0) return { post: posts[0] };
+        if (Array.isArray(posts) && posts.length > 0) return { post: tagSource(posts, source)[0] };
       } catch (e) {
         console.error(`[WP] Error fetching post by slug from ${base}:`, e);
       }
@@ -446,7 +463,7 @@ async function lookupPostBySlugRaw(slug: string): Promise<{ post: WPPost | null 
         if (res.ok || res.status === 404) anySourceAnswered = true;
         if (res.ok) {
           const postById = await res.json();
-          if (postById && postById.id) return { post: postById as WPPost };
+          if (postById && postById.id) return { post: tagSource([postById as WPPost], montecristiSource)[0] };
         }
       } catch (e) {
         console.error('[WP] Error fetching post by ID from Montecristi source:', e);
@@ -455,9 +472,9 @@ async function lookupPostBySlugRaw(slug: string): Promise<{ post: WPPost | null 
 
     // Artículos de los feeds de otros medios.
     const wantedSlug = decodeURIComponent(cleanSlug);
-    for (const { feed } of extraFeeds) {
+    for (const { feed, name, url } of extraFeeds) {
       try {
-        const found = (await getFeedPosts(feed, 30)).find((p) => p.slug === wantedSlug || String(p.id) === wantedSlug);
+        const found = (await getFeedPosts(feed, 30, 0, { name, url })).find((p) => p.slug === wantedSlug || String(p.id) === wantedSlug);
         if (found) return { post: found };
       } catch (e) {
         console.error(`[WP] Error buscando el slug en el feed ${feed}:`, e);
@@ -467,9 +484,9 @@ async function lookupPostBySlugRaw(slug: string): Promise<{ post: WPPost | null 
     // Sin respuesta de la API: buscamos el artículo en los feeds RSS recientes.
     if (!anySourceAnswered) {
       const wanted = decodeURIComponent(cleanSlug);
-      for (const feedUrl of [sources.main.feed, sources.montecristi.feed]) {
+      for (const [feedUrl, source] of [[sources.main.feed, mainSource], [sources.montecristi.feed, montecristiSource]] as const) {
         try {
-          const found = (await getFeedPosts(feedUrl, 30)).find((p) => p.slug === wanted || String(p.id) === wanted);
+          const found = (await getFeedPosts(feedUrl, 30, 0, source)).find((p) => p.slug === wanted || String(p.id) === wanted);
           if (found) return { post: found };
         } catch (e) {
           console.error(`[WP] Error buscando el slug en el feed ${feedUrl}:`, e);

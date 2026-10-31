@@ -1,6 +1,7 @@
 import { WPPost, getFeaturedImage, getCategoryNames, getCategorySlug, toPlainText } from "@/lib/wp-helpers";
 import Link from "next/link";
 import { ProtectedImage } from "./ProtectedImage";
+import { SourceCredit } from "./SourceCredit";
 
 interface NewsCardProps {
   post: WPPost;
@@ -49,6 +50,7 @@ export function NewsCard({
           <span className="text-[10px] font-black text-red-600 mb-4 block tracking-widest uppercase">
             {category}
           </span>
+          <SourceCredit source={post.source} className="block -mt-2 mb-4" />
 
           {variant === "hero" ? (
             <h2 className="font-bold text-gray-900 leading-[1.2] tracking-tight group-hover:text-brand-dark transition-colors text-2xl md:text-3xl">

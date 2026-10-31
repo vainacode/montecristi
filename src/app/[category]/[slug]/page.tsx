@@ -7,6 +7,7 @@ import { ProtectedImage } from "@/components/ProtectedImage";
 import { MostRead } from "@/components/MostRead";
 import { CustomAd } from "@/components/CustomAd";
 import { ListenButton } from "@/components/AudioNewsReader";
+import { SourceCredit } from "@/components/SourceCredit";
 import { ViewTracker } from "@/components/ViewTracker";
 import { ApiFallbackScreen } from "@/components/ApiFallbackScreen";
 import { siteConfig } from "@/config/site";
@@ -502,6 +503,9 @@ async function ArticleContent({ category, slug }: { category: string; slug: stri
         "datePublished": new Date(post.date).toISOString(),
         "dateModified": new Date(post.modified ?? post.date).toISOString(),
         "inLanguage": "es-DO",
+        // Noticia publicada con crédito a su medio de origen (Google la relaciona con la original).
+        ...(post.source?.link ? { "isBasedOn": post.source.link } : {}),
+        ...(post.source?.name ? { "sourceOrganization": { "@type": "NewsMediaOrganization", "name": post.source.name, "url": post.source.url } } : {}),
         "isAccessibleForFree": true,
         "articleSection": categories[0] || "Noticias",
         "keywords": postTags.map((t) => t.name).join(", "),
@@ -626,6 +630,8 @@ async function ArticleContent({ category, slug }: { category: string; slug: stri
                 <Calendar size={14} className="text-brand-dark" />
                 <span>{formatDate(post.date)}</span>
               </div>
+              <span className="w-px h-3 bg-gray-200" />
+              <SourceCredit source={post.source} linked />
             </div>
 
             {/* BOTÓN OFICIAL: ESCUCHAR ESTA NOTICIA (TEXT-TO-SPEECH) */}
@@ -635,6 +641,7 @@ async function ArticleContent({ category, slug }: { category: string; slug: stri
                   id: post.id,
                   title: toPlainText(post.title.rendered),
                   author: authorName || siteConfig.name,
+                  source: post.source?.name,
                   date: formatDate(post.date),
                   category: categories[0] || 'NOTICIAS',
                   slug: post.slug,
